@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<results 
+        xmlns="urn:www-collation-com:1.0"
+        xmlns:coll="urn:www-collation-com:1.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="urn:www-collation-com:1.0
+              urn:www-collation-com:1.0/results.xsd">
+<Template array="1"
+    xsi:type="coll:com.collation.platform.model.discovery.template.AppServerTemplate">
+    <name>IISServerSensor Windows 2008</name>
+    <type>AppServer</type>
+    <internal>true</internal>
+    <filterSet
+        xsi:type="coll:com.collation.platform.model.discovery.template.FilterSet">
+        <filterList array="1"
+            xsi:type="coll:com.collation.platform.model.discovery.template.Filter">
+            <operand1>W3SVC</operand1>
+            <operator>contains</operator>
+            <part>Windows Service Name</part>
+            <displayName>IISServerSensor Windows 2008:Windows Service Name:contains:W3SVC</displayName>
+            <bidiFlag>3</bidiFlag>
+        </filterList>
+        <filterList array="2"
+            xsi:type="coll:com.collation.platform.model.discovery.template.Filter">
+            <operand1>Windows Server 2008</operand1>
+            <operator>contains</operator>
+            <part>Operating System</part>
+            <displayName>IISServerSensor Windows 2008:Operating System:contains:Windows Server 2008</displayName>
+            <bidiFlag>3</bidiFlag>
+        </filterList>
+        <boolExp>0</boolExp>
+        <displayName>IISServerSensor Windows 2008</displayName>
+        <bidiFlag>3</bidiFlag>
+    </filterSet>
+    <order>1</order>
+    <enabled>true</enabled>
+    <description>Added manually</description>
+    <action>1</action>
+    <seedClass>com.collation.discover.seed.app.web.IIsWebServiceSeed</seedClass>
+    <displayName>IISServerSensor Windows 2008</displayName>
+    <bidiFlag>3</bidiFlag>
+</Template>
+
+<Template array="2"
+    xsi:type="coll:com.collation.platform.model.discovery.template.AppServerTemplate">
+    <name>IISServerSensor Windows 2012</name>
+    <type>AppServer</type>
+    <internal>true</internal>
+    <filterSet
+        xsi:type="coll:com.collation.platform.model.discovery.template.FilterSet">
+        <filterList array="1"
+            xsi:type="coll:com.collation.platform.model.discovery.template.Filter">
+            <operand1>W3SVC</operand1>
+            <operator>contains</operator>
+            <part>Windows Service Name</part>
+            <displayName>IISServerSensor Windows 2012:Windows Service Name:contains:W3SVC</displayName>
+            <bidiFlag>3</bidiFlag>
+        </filterList>
+        <filterList array="2"
+            xsi:type="coll:com.collation.platform.model.discovery.template.Filter">
+            <operand1>Windows Server 2012</operand1>
+            <operator>contains</operator>
+            <part>Operating System</part>
+            <displayName>IISServerSensor Windows 2012:Operating System:contains:Windows Server 2012</displayName>
+            <bidiFlag>3</bidiFlag>
+        </filterList>
+        <boolExp>0</boolExp>
+        <displayName>IISServerSensor Windows 2012</displayName>
+        <bidiFlag>3</bidiFlag>
+    </filterSet>
+    <order>1</order>
+    <enabled>true</enabled>
+    <description>Added manually</description>
+    <action>1</action>
+    <seedClass>com.collation.discover.seed.app.web.IIsWebServiceSeed</seedClass>
+    <displayName>IISServerSensor Windows 2012</displayName>
+    <bidiFlag>3</bidiFlag>
+</Template>
+</results>
