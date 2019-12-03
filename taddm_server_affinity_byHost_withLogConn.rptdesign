@@ -1,0 +1,3930 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report xmlns="http://www.eclipse.org/birt/2005/design" version="3.2.15" id="1">
+    <property name="author">Mat Davis</property>
+    <property name="createdBy">Eclipse BIRT Designer Version 2.2.1.r221_v20070924 Build &lt;2.2.0.v20070924-1550></property>
+    <property name="units">in</property>
+    <property name="includeResource">taddm/properties/TaddmBirtReports</property>
+    <text-property name="title">Server Affinity by Host with Logical Connections</text-property>
+    <property name="comments">Licensed Materials - Property of IBM
+  
+5724-N55
+  
+(C) COPYRIGHT IBM CORP. 2009.  All Rights Reserved.
+  
+US Government Users Restricted Rights - Use, duplication or
+disclosure restricted by GSA ADP Schedule Contract with IBM Corp.</property>
+    <html-property name="description">This report displays relationships between servers, arranged with respect to the source and target of the relationship. The first table displays all servers within the specified scope that are the source of a relationship, and the connections from those servers to other servers. The second table displays all servers within the specified scope that are the target of a relationship, and the connections to those servers from other servers.</html-property>
+    <method name="initialize"><![CDATA[importPackage(Packages.com.collation.platform.util);
+webPort = Props.getWebPort(); 
+consoleType="";
+if (true) { 
+	consoleType="console=web&"; 
+} 
+
+if (false) {
+	consoleType = ""; 
+} 
+hostname = "${server.name}";
+licUrl = "http://" + hostname + ":" + webPort + "/cdm/servlet/LICServlet?" + consoleType;
+
+// INTIALIZE THE LOGGER WITH A FILE BASED LOGGER
+//importPackage(Packages.java.util.logging);
+//var fileHandler = new FileHandler("/tmp/birt.log", true);
+//var rootLogger = Logger.getLogger("");
+//rootLogger.addHandler(fileHandler);
+
+//Logger.getAnonymousLogger().info("initialize");]]></method>
+    <property name="theme">TivoliCommonReporting_v1.TCRTheme_v1</property>
+    <text-property name="displayName">Server Affinity by Host</text-property>
+    <list-property name="libraries">
+        <structure>
+            <property name="fileName">tcr_common/lib/TivoliCommonReporting_v1.0.rptlibrary</property>
+            <property name="namespace">TivoliCommonReporting_v1</property>
+        </structure>
+    </list-property>
+    <list-property name="includeScripts">
+        <property>tcr_common/scripts/ReportUtils.js</property>
+        <property>tcr_common/scripts/DateTime.js</property>
+    </list-property>
+    <parameters>
+        <scalar-parameter name="host" id="3436">
+            <property name="valueType">dynamic</property>
+            <property name="dataType">string</property>
+            <property name="paramType">simple</property>
+            <text-property name="promptText" key="hostnamePrompt"></text-property>
+            <property name="isRequired">false</property>
+            <property name="controlType">list-box</property>
+            <property name="dataSetName">allHosts</property>
+            <expression name="valueExpr">dataSetRow["guid"]</expression>
+            <expression name="labelExpr">dataSetRow["name"]</expression>
+            <property name="mustMatch">true</property>
+            <property name="fixedOrder">false</property>
+            <property name="defaultValue">localhost</property>
+            <property name="distinct">true</property>
+            <property name="sortBy">label</property>
+            <property name="sortDirection">asc</property>
+            <structure name="format">
+                <property name="category">Unformatted</property>
+            </structure>
+        </scalar-parameter>
+        <scalar-parameter name="same_server_relationships" id="2476">
+            <property name="valueType">static</property>
+            <property name="dataType">boolean</property>
+            <property name="paramType">simple</property>
+            <text-property name="promptText" key="same_server_parameter_desc"></text-property>
+            <property name="controlType">radio-button</property>
+            <property name="fixedOrder">true</property>
+            <property name="defaultValue">false</property>
+            <property name="distinct">true</property>
+            <structure name="format"/>
+            <list-property name="selectionList">
+                <structure>
+                    <property name="value">true</property>
+                    <property name="label">Yes</property>
+                    <property name="labelID">yes</property>
+                </structure>
+                <structure>
+                    <property name="value">false</property>
+                    <property name="label">No</property>
+                    <property name="labelID">no</property>
+                </structure>
+            </list-property>
+        </scalar-parameter>
+        <scalar-parameter name="exclude_ports" id="2477">
+            <property name="valueType">static</property>
+            <property name="dataType">string</property>
+            <property name="paramType">simple</property>
+            <text-property name="promptText" key="exclude_ports_prompt"></text-property>
+            <property name="isRequired">false</property>
+            <property name="controlType">text-box</property>
+            <property name="defaultValue">22,53</property>
+            <property name="distinct">true</property>
+            <structure name="format">
+                <property name="category">Unformatted</property>
+            </structure>
+        </scalar-parameter>
+    </parameters>
+    <data-sources>
+        <oda-data-source extensionID="org.eclipse.birt.report.data.oda.jdbc" name="TADDM Data Source" id="153">
+            <property name="odaDriverClass">com.ibm.db2.jcc.DB2Driver</property>
+            <property name="odaURL">jdbc:db2://julie:60007/demo720</property>
+            <property name="odaUser">db2inst1</property>
+            <encrypted-property name="odaPassword" encryptionID="base64">dDF2b2wx</encrypted-property>
+        </oda-data-source>
+    </data-sources>
+    <data-sets>
+        <oda-data-set extensionID="org.eclipse.birt.report.data.oda.jdbc.JdbcSelectDataSet" name="source systems" id="2540">
+            <list-property name="computedColumns">
+                <structure>
+                    <property name="name">TARGET_PRIMARY_NAME_COMPUTED</property>
+                    <expression name="expression">var hostnameCache = reportContext.getPersistentGlobalVariable("hostnameCache");
+if (hostnameCache == null || !hostnameCache) {
+    hostnameCache = new java.util.HashMap();
+}
+
+if (row["TARGET_PRIMARY_DISPLAYNAME"] == null)
+{
+	var targetIpAddress = row["TARGET_IP_ADDRESS"];
+	if (hostnameCache.containsKey(targetIpAddress))
+	{
+		retVal = hostnameCache.get(targetIpAddress);
+	}
+	else
+	{
+		var ia = java.net.InetAddress.getByName(targetIpAddress);
+		var hostname = ia.getCanonicalHostName();
+		hostnameCache.put(targetIpAddress, hostname);
+    	reportContext.setPersistentGlobalVariable("hostnameCache", hostnameCache);
+		retVal = hostname;
+	}
+}
+else
+	retVal = null;</expression>
+                    <property name="dataType">string</property>
+                </structure>
+                <structure>
+                    <property name="name">TARGET_PRIMARY_NAME</property>
+                    <expression name="expression">var label = row["TARGET_PRIMARY_LABEL"];
+if (label != null)
+	retVal = label;
+else
+	retVal = row["TARGET_PRIMARY_DISPLAYNAME"];</expression>
+                    <property name="dataType">string</property>
+                </structure>
+                <structure>
+                    <property name="name">SOURCE_PRIMARY_NAME</property>
+                    <expression name="expression">var label = row["SOURCE_PRIMARY_LABEL"];
+if (label != null)
+	retVal = label;
+else
+	retVal = row["SOURCE_PRIMARY_DISPLAYNAME"];</expression>
+                    <property name="dataType">string</property>
+                </structure>
+            </list-property>
+            <list-property name="columnHints">
+                <structure>
+                    <property name="columnName">SOURCE_PRIMARY_GUID</property>
+                    <property name="displayName">SOURCE_PRIMARY_GUID</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_PRIMARY_DISPLAYNAME</property>
+                    <property name="displayName">SOURCE_PRIMARY_DISPLAYNAME</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_PRIMARY_LABEL</property>
+                    <property name="displayName">SOURCE_PRIMARY_LABEL</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_PRIMARY_TYPE</property>
+                    <property name="displayName">SOURCE_PRIMARY_TYPE</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_PK_C</property>
+                    <property name="displayName">SOURCE_PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_HOST__PK_C</property>
+                    <property name="displayName">SOURCE_HOST__PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_HOSTNAME</property>
+                    <property name="displayName">SOURCE_HOSTNAME</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_SERV__PK_C</property>
+                    <property name="displayName">SOURCE_SERV__PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_IP_ADDRESS</property>
+                    <property name="displayName">SOURCE_IP_ADDRESS</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_PORT</property>
+                    <property name="displayName">SOURCE_PORT</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_HOST_GUID</property>
+                    <property name="displayName">SOURCE_HOST_GUID</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PRIMARY_GUID</property>
+                    <property name="displayName">TARGET_PRIMARY_GUID</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PRIMARY_DISPLAYNAME</property>
+                    <property name="displayName">TARGET_PRIMARY_DISPLAYNAME</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PRIMARY_LABEL</property>
+                    <property name="displayName">TARGET_PRIMARY_LABEL</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PRIMARY_TYPE</property>
+                    <property name="displayName">TARGET_PRIMARY_TYPE</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PK_C</property>
+                    <property name="displayName">TARGET_PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_HOST__PK_C</property>
+                    <property name="displayName">TARGET_HOST__PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_HOSTNAME</property>
+                    <property name="displayName">TARGET_HOSTNAME</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_HOST_GUID</property>
+                    <property name="displayName">TARGET_HOST_GUID</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_SERV__PK_C</property>
+                    <property name="displayName">TARGET_SERV__PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_IP_ADDRESS</property>
+                    <property name="displayName">TARGET_IP_ADDRESS</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PORT</property>
+                    <property name="displayName">TARGET_PORT</property>
+                </structure>
+                <structure>
+                    <property name="columnName">RELATIONSHIP_TYPE</property>
+                    <property name="displayName">RELATIONSHIP_TYPE</property>
+                </structure>
+            </list-property>
+            <list-property name="filter">
+                <structure>
+                    <property name="operator">is-true</property>
+                    <expression name="expr">importPackage(Packages.com.collation.platform.model.topology.net);
+importPackage(Packages.com.collation.platform.model);
+
+// don't use IP address to match, use guid or host guid
+//var srcAddr = row["SOURCE_IP_ADDRESS"];
+//if (srcAddr != null)
+//{
+//	ipAddress = new IpAddressImpl();
+//	ipAddress.setStringNotation(srcAddr);
+//	ipSet = reportContext.getPersistentGlobalVariable("ipSet");
+
+//	if (ipSet != null &amp;&amp; ipSet.contains(ipAddress))
+//		retVal = true;
+//	else
+//		retVal = false;
+//}
+//else
+//{
+	// no IP address, use guid for computer system
+	
+	// if HOST_GUID is not null that means we need to use the host CS GUID of an AppServer or Service
+	var primGuid = row["SOURCE_HOST_GUID"];
+	if (primGuid == null)
+	{
+		// HOST_GUID is null, so use the PRIMARY_GUID which should be of a CS
+		primGuid = row["SOURCE_PRIMARY_GUID"];
+	}
+	var guid = new Guid(primGuid);
+	guidSet = reportContext.getPersistentGlobalVariable("guidSet");
+	
+	if (guidSet != null &amp;&amp; guidSet.contains(guid))
+		retVal = true;
+	else
+		retVal = false;
+//}</expression>
+                </structure>
+                <structure>
+                    <property name="operator">is-true</property>
+                    <expression name="expr">var sourcePort = row["SOURCE_PORT"];
+var targetPort = row["TARGET_PORT"];
+var excludePortsParam = params["exclude_ports"];
+
+retVal = true;
+if (excludePortsParam &amp;&amp; params["exclude_ports"].value != null) {
+    var excludedPorts = excludePortsParam.split(",");
+    for (var i = 0; i &lt; excludedPorts.length; i++) {
+        if ((sourcePort &amp;&amp; excludedPorts[i].replace(/^\s+|\s+$/g, '') == sourcePort) || (targetPort &amp;&amp; excludedPorts[i].replace(/^\s+|\s+$/g, '') == targetPort)) {
+            retVal = false;
+            break;
+        }
+    }
+}</expression>
+                </structure>
+                <structure>
+                    <property name="operator">is-true</property>
+                    <expression name="expr">if (params["same_server_relationships"] == true) {
+	retVal = true;
+}
+else {
+	targetHostPK = row["TARGET_HOST__PK_C"]
+	if (targetHostPK != null)
+	{
+		retVal = row["SOURCE_HOST__PK_C"] != targetHostPK;
+	}
+	else
+	{
+		retVal = row["SOURCE_IP_ADDRESS"] != row["TARGET_IP_ADDRESS"];
+	}
+}</expression>
+                    <simple-property-list name="value1"/>
+                </structure>
+                <structure>
+                    <property name="operator">ne</property>
+                    <expression name="expr">row["TARGET_IP_ADDRESS"]</expression>
+                    <simple-property-list name="value1">
+                        <value>"0:0:0:0:0:0:0:1"</value>
+                    </simple-property-list>
+                </structure>
+                <structure>
+                    <property name="operator">not-like</property>
+                    <expression name="expr">row["TARGET_IP_ADDRESS"]</expression>
+                    <simple-property-list name="value1">
+                        <value>"127.%"</value>
+                    </simple-property-list>
+                </structure>
+                <structure>
+                    <property name="operator">not-like</property>
+                    <expression name="expr">// Logical Connections can sometimes create duplicates where one address
+// has a special prefix of '0:0:0:0:0:ffff:' for IPv6 compatibility, this removes those
+// duplicates
+row["TARGET_IP_ADDRESS"]</expression>
+                    <simple-property-list name="value1">
+                        <value>"0:0:0:0:0:ffff:%"</value>
+                    </simple-property-list>
+                </structure>
+            </list-property>
+            <structure name="cachedMetaData">
+                <list-property name="resultSet">
+                    <structure>
+                        <property name="position">1</property>
+                        <property name="name">SOURCE_PRIMARY_GUID</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">2</property>
+                        <property name="name">SOURCE_PRIMARY_DISPLAYNAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">3</property>
+                        <property name="name">SOURCE_PRIMARY_LABEL</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">4</property>
+                        <property name="name">SOURCE_PRIMARY_TYPE</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">5</property>
+                        <property name="name">SOURCE_PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">6</property>
+                        <property name="name">SOURCE_HOST__PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">7</property>
+                        <property name="name">SOURCE_HOSTNAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">8</property>
+                        <property name="name">SOURCE_SERV__PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">9</property>
+                        <property name="name">SOURCE_IP_ADDRESS</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">10</property>
+                        <property name="name">SOURCE_PORT</property>
+                        <property name="dataType">integer</property>
+                    </structure>
+                    <structure>
+                        <property name="position">11</property>
+                        <property name="name">SOURCE_HOST_GUID</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">12</property>
+                        <property name="name">TARGET_PRIMARY_GUID</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">13</property>
+                        <property name="name">TARGET_PRIMARY_DISPLAYNAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">14</property>
+                        <property name="name">TARGET_PRIMARY_LABEL</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">15</property>
+                        <property name="name">TARGET_PRIMARY_TYPE</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">16</property>
+                        <property name="name">TARGET_PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">17</property>
+                        <property name="name">TARGET_HOST__PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">18</property>
+                        <property name="name">TARGET_HOSTNAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">19</property>
+                        <property name="name">TARGET_HOST_GUID</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">20</property>
+                        <property name="name">TARGET_SERV__PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">21</property>
+                        <property name="name">TARGET_IP_ADDRESS</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">22</property>
+                        <property name="name">TARGET_PORT</property>
+                        <property name="dataType">integer</property>
+                    </structure>
+                    <structure>
+                        <property name="position">23</property>
+                        <property name="name">RELATIONSHIP_TYPE</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">24</property>
+                        <property name="name">TARGET_PRIMARY_NAME_COMPUTED</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">25</property>
+                        <property name="name">TARGET_PRIMARY_NAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">26</property>
+                        <property name="name">SOURCE_PRIMARY_NAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                </list-property>
+            </structure>
+            <property name="dataSource">TADDM Data Source</property>
+            <list-property name="resultSet">
+                <structure>
+                    <property name="position">1</property>
+                    <property name="name">SOURCE_PRIMARY_GUID</property>
+                    <property name="nativeName">SOURCE_PRIMARY_GUID</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">2</property>
+                    <property name="name">SOURCE_PRIMARY_DISPLAYNAME</property>
+                    <property name="nativeName">SOURCE_PRIMARY_DISPLAYNAME</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">3</property>
+                    <property name="name">SOURCE_PRIMARY_LABEL</property>
+                    <property name="nativeName">SOURCE_PRIMARY_LABEL</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">4</property>
+                    <property name="name">SOURCE_PRIMARY_TYPE</property>
+                    <property name="nativeName">SOURCE_PRIMARY_TYPE</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">5</property>
+                    <property name="name">SOURCE_PK_C</property>
+                    <property name="nativeName">SOURCE_PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">6</property>
+                    <property name="name">SOURCE_HOST__PK_C</property>
+                    <property name="nativeName">SOURCE_HOST__PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">7</property>
+                    <property name="name">SOURCE_HOSTNAME</property>
+                    <property name="nativeName">SOURCE_HOSTNAME</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">8</property>
+                    <property name="name">SOURCE_SERV__PK_C</property>
+                    <property name="nativeName">SOURCE_SERV__PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">9</property>
+                    <property name="name">SOURCE_IP_ADDRESS</property>
+                    <property name="nativeName">SOURCE_IP_ADDRESS</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">10</property>
+                    <property name="name">SOURCE_PORT</property>
+                    <property name="nativeName">SOURCE_PORT</property>
+                    <property name="dataType">integer</property>
+                    <property name="nativeDataType">4</property>
+                </structure>
+                <structure>
+                    <property name="position">11</property>
+                    <property name="name">SOURCE_HOST_GUID</property>
+                    <property name="nativeName">SOURCE_HOST_GUID</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">12</property>
+                    <property name="name">TARGET_PRIMARY_GUID</property>
+                    <property name="nativeName">TARGET_PRIMARY_GUID</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">13</property>
+                    <property name="name">TARGET_PRIMARY_DISPLAYNAME</property>
+                    <property name="nativeName">TARGET_PRIMARY_DISPLAYNAME</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">14</property>
+                    <property name="name">TARGET_PRIMARY_LABEL</property>
+                    <property name="nativeName">TARGET_PRIMARY_LABEL</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">15</property>
+                    <property name="name">TARGET_PRIMARY_TYPE</property>
+                    <property name="nativeName">TARGET_PRIMARY_TYPE</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">16</property>
+                    <property name="name">TARGET_PK_C</property>
+                    <property name="nativeName">TARGET_PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">17</property>
+                    <property name="name">TARGET_HOST__PK_C</property>
+                    <property name="nativeName">TARGET_HOST__PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">18</property>
+                    <property name="name">TARGET_HOSTNAME</property>
+                    <property name="nativeName">TARGET_HOSTNAME</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">19</property>
+                    <property name="name">TARGET_HOST_GUID</property>
+                    <property name="nativeName">TARGET_HOST_GUID</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">20</property>
+                    <property name="name">TARGET_SERV__PK_C</property>
+                    <property name="nativeName">TARGET_SERV__PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">21</property>
+                    <property name="name">TARGET_IP_ADDRESS</property>
+                    <property name="nativeName">TARGET_IP_ADDRESS</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">22</property>
+                    <property name="name">TARGET_PORT</property>
+                    <property name="nativeName">TARGET_PORT</property>
+                    <property name="dataType">integer</property>
+                    <property name="nativeDataType">4</property>
+                </structure>
+                <structure>
+                    <property name="position">23</property>
+                    <property name="name">RELATIONSHIP_TYPE</property>
+                    <property name="nativeName">RELATIONSHIP_TYPE</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+            </list-property>
+            <property name="queryText">SELECT 
+    SOURCE.PRIMARY_GUID AS SOURCE_PRIMARY_GUID,
+	SOURCE.PRIMARY_DISPLAYNAME AS SOURCE_PRIMARY_DISPLAYNAME,
+	SOURCE.PRIMARY_LABEL AS SOURCE_PRIMARY_LABEL,
+	SOURCE.PRIMARY_TYPE AS SOURCE_PRIMARY_TYPE,
+	SOURCE.PK_C AS SOURCE_PK_C,
+	SOURCE.HOST__PK_C AS SOURCE_HOST__PK_C,
+	SOURCE.HOSTNAME AS SOURCE_HOSTNAME,
+	SOURCE.SERV__PK_C AS SOURCE_SERV__PK_C,
+	CASE
+		WHEN REL.SOURCE_IP IS NULL
+			THEN SOURCE.IP_ADDRESS
+		ELSE REL.SOURCE_IP
+		END AS SOURCE_IP_ADDRESS,
+	CASE
+		WHEN REL.SOURCE_PORT IS NULL
+			THEN SOURCE.PORT
+		ELSE REL.SOURCE_PORT
+		END AS SOURCE_PORT,
+    SOURCE.HOST_GUID AS SOURCE_HOST_GUID,
+	TARGET.PRIMARY_GUID AS TARGET_PRIMARY_GUID,
+	TARGET.PRIMARY_DISPLAYNAME AS TARGET_PRIMARY_DISPLAYNAME,
+	TARGET.PRIMARY_LABEL AS TARGET_PRIMARY_LABEL,
+	CASE
+		WHEN TARGET.PRIMARY_TYPE IS NULL
+			THEN 'ComputerSystem'
+		ELSE TARGET.PRIMARY_TYPE
+		END AS TARGET_PRIMARY_TYPE,
+	TARGET.PK_C AS TARGET_PK_C,
+	TARGET.HOST__PK_C AS TARGET_HOST__PK_C,
+	TARGET.HOSTNAME AS TARGET_HOSTNAME,
+    TARGET.HOST_GUID AS TARGET_HOST_GUID,
+	TARGET.SERV__PK_C AS TARGET_SERV__PK_C,
+	CASE 
+		WHEN TARGET.IP_ADDRESS IS NULL
+			THEN REL.TARGET_IP
+		ELSE TARGET.IP_ADDRESS
+		END AS TARGET_IP_ADDRESS,
+	CASE 
+		WHEN TARGET.PORT IS NULL
+			THEN REL.TARGET_PORT
+		ELSE TARGET.PORT
+		END AS TARGET_PORT,
+	REL.JDOCLASS_C AS RELATIONSHIP_TYPE
+FROM (
+	SELECT R1.JDOCLASS_C,
+		S1.SOURCE_GUID AS SOURCE_GUID,
+		T1.TARGET_GUID AS TARGET_GUID,
+		NULL AS TARGET_IP,
+		NULL AS TARGET_PORT,
+		NULL AS SOURCE_IP,
+		NULL AS SOURCE_PORT
+	FROM BB_RELATIONSHIP26_V R1
+	LEFT JOIN (
+		SELECT P1.GUID_C AS SOURCE_GUID,
+			P1.NAME_C AS SOURCE_NAME,
+			P1.CLASSNAME_C AS SOURCE_CLASS
+		FROM BB_PERSOBJ_V P1
+		) S1 ON R1.SOURCE_C = S1.SOURCE_GUID
+	LEFT JOIN (
+		SELECT P2.GUID_C AS TARGET_GUID,
+			P2.NAME_C AS TARGET_NAME,
+			P2.CLASSNAME_C AS TARGET_CLASS
+		FROM BB_PERSOBJ_V P2
+		) T1 ON R1.TARGET_C = T1.TARGET_GUID
+	WHERE R1.JDOCLASS_C IN (
+			'com.collation.topomgr.jdo.topology.app.dependencies.TransactionalDependencyJdo',
+			'com.collation.topomgr.jdo.topology.app.dependencies.IpDependencyJdo',
+			'com.collation.topomgr.jdo.topology.app.dependencies.ServiceDependencyJdo'
+			)
+	
+	UNION
+
+	SELECT 
+		NC1.JDOCLASS_C,
+		CS4.GUID_C AS SOURCE_GUID,
+		CS5.GUID_C AS TARGET_GUID,
+		NULL AS TARGET_IP,
+		NULL AS TARGET_PORT,
+		NULL AS SOURCE_IP,
+		NULL AS SOURCE_PORT
+	FROM BB_NETWORKCONNECTION38_V NC1,
+		BB_COMPUTERSYSTEM40_V CS4,
+		BB_COMPUTERSYSTEM40_V CS5
+	WHERE NC1.PK__FROMCOMPUTERSYSTEM_C = CS4.PK_C
+		AND NC1.PK__TOCOMPUTERSYSTEM_C = CS5.PK_C
+		
+	UNION
+	
+	SELECT LC1.JDOCLASS_C,
+		CS6.GUID_C AS SOURCE_GUID,
+		-- LogConns are attached to the source side RTP, so we only know IP/port about target
+		NULL AS TARGET_GUID,
+		LC1.TOIP_C AS TARGET_IP,
+		LC1.TOPORT_C AS TARGET_PORT,
+		LC1.FROMIP_C AS SOURCE_IP,
+		LC1.FROMPORT_C AS SOURCE_PORT
+	FROM BB_LOGICALCONNECTION89_V LC1,
+		BB_RUNTIMEPROCESS15_V RT1,
+		BB_OPERATINGSYSTEM62_V OS1,
+		BB_COMPUTERSYSTEM40_V CS6
+	WHERE LC1.PK__PARENTLOGICALCONNECTION_C = RT1.PK_C
+		AND RT1.PK__PARENTRUNTIMEPROCESS_C = OS1.PK_C
+		AND OS1.PK__PARENTOPERATINGSYSTEM_C = CS6.PK_C
+		AND RT1.PK_C NOT IN (
+				SELECT PK__RUNTIMEPROCESSES_C
+				FROM BB_PROCESSPOOLJSSES_D8D4C105J
+				)
+
+	UNION
+
+	SELECT LC2.JDOCLASS_C,
+		APP1.GUID_C AS SOURCE_GUID,
+		-- LogConns are attached to the source side RTP, so we only know IP/port about target
+		NULL AS TARGET_GUID,
+		LC2.TOIP_C AS TARGET_IP,
+		LC2.TOPORT_C AS TARGET_PORT,
+		LC2.FROMIP_C AS SOURCE_IP,
+		LC2.FROMPORT_C AS SOURCE_PORT
+	FROM BB_LOGICALCONNECTION89_V LC2,
+		BB_RUNTIMEPROCESS15_V RT2,
+		BB_PROCESSPOOLJSSES_D8D4C105J RTPP1,
+		BB_PROCESSPOOL39_V PP1,
+		BB_APPSERVER6_V APP1
+	WHERE LC2.PK__PARENTLOGICALCONNECTION_C = RT2.PK_C
+		AND RT2.PK_C = RTPP1.PK__RUNTIMEPROCESSES_C
+		AND RTPP1.PK__JDOID_C = PP1.PK_C
+		AND PP1.PK__PARENTPROCESSPOOL_C = APP1.PK_C
+
+	) REL
+INNER JOIN (
+	SELECT CS1.GUID_C AS PRIMARY_GUID,
+		CS1.DISPLAYNAME_C AS PRIMARY_DISPLAYNAME,
+		CS1.LABEL_C AS PRIMARY_LABEL,
+        CASE 
+            WHEN CS1.JDOCLASS_C LIKE '%WindowsComputerSystemJdo'
+                THEN 'Windows'
+            WHEN CS1.JDOCLASS_C LIKE '%LinuxUnitaryComputerSystemJdo'
+                THEN 'Linux'
+            WHEN CS1.JDOCLASS_C LIKE '%SunSPARCUnitaryComputerSystemJdo'
+                THEN 'Solaris'
+            WHEN CS1.JDOCLASS_C LIKE '%AixUnitaryComputerSystemJdo'
+                THEN 'AIX'
+            WHEN CS1.JDOCLASS_C LIKE '%VmwareUnitaryComputerSystemJdo'
+                THEN 'VMware ESX'
+            ELSE CS1.TYPE_C
+            END AS PRIMARY_TYPE,
+        -- replaced with above
+		--,CS1.TYPE_C AS PRIMARY_TYPE
+		CS1.PK_C AS PK_C,
+		CS1.PK_C AS HOST__PK_C,
+        CASE 
+			WHEN CS1.FQDN_C IS NULL
+				THEN CS1.NAME_C
+			ELSE CS1.FQDN_C
+		END AS HOSTNAME,
+		--,CS1.FQDN_C AS HOSTNAME
+		CASE 
+			WHEN 1 = 1
+				THEN NULL
+			ELSE '0'
+			END AS SERV__PK_C,
+        -- relationships to computer systems aren't IP specific
+		--,BB_IPADDRESS73_V.STRINGNOTATION_C AS IP_ADDRESS
+        NULL AS IP_ADDRESS,
+		CASE 
+			WHEN 1 = 1
+				THEN NULL
+			ELSE 0
+			END AS PORT,
+        -- this column is for appserver and services below
+        NULL AS HOST_GUID
+	FROM BB_COMPUTERSYSTEM40_V CS1
+	--LEFT JOIN BB_IPINTERFACE96_V ON BB_IPINTERFACE96_V.PK__PARENTIPINTERFACE_C = CS1.PK_C
+	--LEFT JOIN BB_IPADDRESS73_V ON BB_IPADDRESS73_V.PK_C = BB_IPINTERFACE96_V.PK__IPADDRESS_C
+	
+	UNION
+	
+	SELECT 
+		APP2.GUID_C AS PRIMARY_GUID,
+		CASE 
+			WHEN (
+					APP2.PRODUCTNAME_C IS NOT NULL
+					AND APP2.PRODUCTNAME_C != ''
+					)
+				THEN APP2.PRODUCTNAME_C
+			ELSE APP2.DISPLAYNAME_C
+			END AS PRIMARY_DISPLAYNAME,
+        NULL AS PRIMARY_LABEL,
+		CASE 
+			WHEN (
+					APP2.OBJECTTYPE_C IS NOT NULL
+					AND APP2.OBJECTTYPE_C != ''
+					)
+				THEN APP2.OBJECTTYPE_C
+            WHEN (
+					APP2.KEYNAME_C IS NOT NULL
+					AND APP2.KEYNAME_C != ''
+					)
+				THEN APP2.KEYNAME_C
+            when (APP2.JDOCLASS_C like '%MQQueueManagerJdo' or APP2.JDOCLASS_C like '%MQSubsystemJdo') then 'Queue Manager'
+            when (APP2.JDOCLASS_C like '%DB2SubsystemJdo') then 'Database'
+			ELSE 'AppServer'
+			END AS PRIMARY_TYPE,
+		APP2.PK_C AS PK_C,
+		APP2.PK__HOST_C AS HOST__PK_C,
+        CASE 
+			WHEN CS2.FQDN_C IS NULL
+				THEN CS2.NAME_C
+			ELSE CS2.FQDN_C
+		END AS HOSTNAME,
+		--CS2.FQDN_C AS HOSTNAME,
+		APP2.PK_C AS SERV__PK_C,
+		IP2.STRINGNOTATION_C AS IP_ADDRESS,
+		BA2.PORTNUMBER_C AS PORT,
+        CS2.GUID_C AS HOST_GUID
+	FROM BB_APPSERVER6_V APP2
+	LEFT JOIN (
+		SELECT PK_C,
+			PORTNUMBER_C,
+			PK__PRIMARYIPADDRESS_C
+		FROM BB_BINDADDRESS67_V
+		) BA2 ON APP2.PK__PRIMARYSAP_C = BA2.PK_C
+	LEFT JOIN (
+		SELECT PK_C,
+			STRINGNOTATION_C
+		FROM BB_IPADDRESS73_V
+		) IP2 ON BA2.PK__PRIMARYIPADDRESS_C = IP2.PK_C
+	LEFT JOIN (
+		SELECT PK_C,
+			FQDN_C,
+			NAME_C,
+            GUID_C
+		FROM BB_COMPUTERSYSTEM40_V
+		) CS2 ON APP2.PK__HOST_C = CS2.PK_C
+	
+	UNION
+	
+	SELECT SVC3.GUID_C AS PRIMARY_GUID,
+		CASE 
+			WHEN (
+					SVC3.NAME_C IS NOT NULL
+					AND SVC3.NAME_C != ''
+					)
+				THEN SVC3.NAME_C
+			ELSE SVC3.DISPLAYNAME_C
+			END AS PRIMARY_DISPLAYNAME,
+        NULL AS PRIMARY_LABEL,
+		CASE 
+			WHEN (
+					SVC3.OBJECTTYPE_C IS NOT NULL
+					AND SVC3.OBJECTTYPE_C != ''
+					)
+				THEN SVC3.OBJECTTYPE_C
+			ELSE SVC3.PRODUCTNAME_C
+			END AS PRIMARY_TYPE,
+		SVC3.PK_C AS PK_C,
+		SVC3.PK__HOST_C AS HOST__PK_C,
+        CASE 
+			WHEN CS3.FQDN_C IS NULL
+				THEN CS3.NAME_C
+			ELSE CS3.FQDN_C
+		END AS HOSTNAME,
+		--CS3.FQDN_C AS HOSTNAME,
+		SVC3.PK_C AS SERV__PK_C,
+		IP3.STRINGNOTATION_C AS IP_ADDRESS,
+		BA3.PORTNUMBER_C AS PORT,
+        CS3.GUID_C AS HOST_GUID
+	FROM BB_SERVICE81_V SVC3
+	LEFT JOIN (
+		SELECT PK_C,
+			PK__BINDADDRESS_C
+		FROM BB_SERVICEACCESSPOINT13_V
+		) SAP3 ON SVC3.PK__PRIMARYSAP_C = SAP3.PK_C
+	LEFT JOIN (
+		SELECT PK_C,
+			PORTNUMBER_C,
+			PK__PRIMARYIPADDRESS_C
+		FROM BB_BINDADDRESS67_V
+		) BA3 ON SAP3.PK__BINDADDRESS_C = BA3.PK_C
+	LEFT JOIN (
+		SELECT PK_C,
+			STRINGNOTATION_C
+		FROM BB_IPADDRESS73_V
+		) IP3 ON BA3.PK__PRIMARYIPADDRESS_C = IP3.PK_C
+	LEFT JOIN (
+		SELECT PK_C,
+			FQDN_C,
+			NAME_C,
+            GUID_C
+		FROM BB_COMPUTERSYSTEM40_V
+		) CS3 ON SVC3.PK__HOST_C = CS3.PK_C
+	) SOURCE ON (REL.SOURCE_GUID = SOURCE.PRIMARY_GUID)
+	
+LEFT OUTER JOIN (
+	SELECT CS1.GUID_C AS PRIMARY_GUID,
+		CS1.DISPLAYNAME_C AS PRIMARY_DISPLAYNAME,
+		CS1.LABEL_C AS PRIMARY_LABEL,
+        CASE 
+            WHEN CS1.JDOCLASS_C LIKE '%WindowsComputerSystemJdo'
+                THEN 'Windows'
+            WHEN CS1.JDOCLASS_C LIKE '%LinuxUnitaryComputerSystemJdo'
+                THEN 'Linux'
+            WHEN CS1.JDOCLASS_C LIKE '%SunSPARCUnitaryComputerSystemJdo'
+                THEN 'Solaris'
+            WHEN CS1.JDOCLASS_C LIKE '%AixUnitaryComputerSystemJdo'
+                THEN 'AIX'
+            WHEN CS1.JDOCLASS_C LIKE '%VmwareUnitaryComputerSystemJdo'
+                THEN 'VMware ESX'
+            ELSE CS1.TYPE_C
+            END AS PRIMARY_TYPE,
+        -- replaced with above
+		--CS1.TYPE_C AS PRIMARY_TYPE,
+		CS1.PK_C AS PK_C,
+		CS1.PK_C AS HOST__PK_C,
+		CS1.FQDN_C AS HOSTNAME,
+        CS1.GUID_C AS HOST_GUID,
+		CASE 
+			WHEN 1 = 1
+				THEN NULL
+			ELSE '0'
+			END AS SERV__PK_C,
+        -- relationships to computer systems aren't IP specific
+		--BB_IPADDRESS73_V.STRINGNOTATION_C AS IP_ADDRESS,
+		NULL AS IP_ADDRESS,
+		CASE 
+			WHEN 1 = 1
+				THEN NULL
+			ELSE 0
+			END AS PORT
+	FROM BB_COMPUTERSYSTEM40_V CS1
+	--LEFT JOIN BB_IPINTERFACE96_V ON BB_IPINTERFACE96_V.PK__PARENTIPINTERFACE_C = CS1.PK_C
+	--LEFT JOIN BB_IPADDRESS73_V ON BB_IPADDRESS73_V.PK_C = BB_IPINTERFACE96_V.PK__IPADDRESS_C
+	
+	UNION
+	
+	SELECT APP2.GUID_C AS PRIMARY_GUID,
+		CASE 
+			WHEN (
+					APP2.PRODUCTNAME_C IS NOT NULL
+					AND APP2.PRODUCTNAME_C != ''
+					)
+				THEN APP2.PRODUCTNAME_C
+			ELSE APP2.DISPLAYNAME_C
+			END AS PRIMARY_DISPLAYNAME
+        ,NULL AS PRIMARY_LABEL,
+		CASE 
+			WHEN (
+					APP2.OBJECTTYPE_C IS NOT NULL
+					AND APP2.OBJECTTYPE_C != ''
+					)
+				THEN APP2.OBJECTTYPE_C
+            WHEN (
+					APP2.KEYNAME_C IS NOT NULL
+					AND APP2.KEYNAME_C != ''
+					)
+				THEN APP2.KEYNAME_C
+            when (APP2.JDOCLASS_C like '%MQQueueManagerJdo' or APP2.JDOCLASS_C like '%MQSubsystemJdo') then 'Queue Manager'
+            when (APP2.JDOCLASS_C like '%DB2SubsystemJdo') then 'Database'
+			ELSE 'AppServer'
+			END AS PRIMARY_TYPE,
+		APP2.PK_C AS PK_C,
+		APP2.PK__HOST_C AS HOST__PK_C,
+		CS2.FQDN_C AS HOSTNAME,
+        CS2.GUID_C AS HOST_GUID,
+		APP2.PK_C AS SERV__PK_C,
+		IP2.STRINGNOTATION_C AS IP_ADDRESS,
+		BA2.PORTNUMBER_C AS PORT
+	FROM BB_APPSERVER6_V APP2
+	LEFT JOIN (
+		SELECT PK_C,
+			PORTNUMBER_C,
+			PK__PRIMARYIPADDRESS_C
+		FROM BB_BINDADDRESS67_V
+		) BA2 ON APP2.PK__PRIMARYSAP_C = BA2.PK_C
+	LEFT JOIN (
+		SELECT PK_C,
+			STRINGNOTATION_C
+		FROM BB_IPADDRESS73_V
+		) IP2 ON BA2.PK__PRIMARYIPADDRESS_C = IP2.PK_C
+	LEFT JOIN (
+		SELECT PK_C,
+			FQDN_C,
+            GUID_C
+		FROM BB_COMPUTERSYSTEM40_V
+		) CS2 ON APP2.PK__HOST_C = CS2.PK_C
+	
+	UNION
+	
+	SELECT SVC3.GUID_C AS PRIMARY_GUID,
+		CASE 
+			WHEN (
+					SVC3.NAME_C IS NOT NULL
+					AND SVC3.NAME_C != ''
+					)
+				THEN SVC3.NAME_C
+			ELSE SVC3.DISPLAYNAME_C
+			END AS PRIMARY_DISPLAYNAME,
+        NULL AS PRIMARY_LABEL,
+		CASE 
+			WHEN (
+					SVC3.OBJECTTYPE_C IS NOT NULL
+					AND SVC3.OBJECTTYPE_C != ''
+					)
+				THEN SVC3.OBJECTTYPE_C
+			ELSE SVC3.PRODUCTNAME_C
+			END AS PRIMARY_TYPE,
+		SVC3.PK_C AS PK_C,
+		SVC3.PK__HOST_C AS HOST__PK_C,
+		CS3.FQDN_C AS HOSTNAME,
+        CS3.GUID_C AS HOST_GUID,
+		SVC3.PK_C AS SERV__PK_C,
+		IP3.STRINGNOTATION_C AS IP_ADDRESS,
+		BA3.PORTNUMBER_C AS PORT
+	FROM BB_SERVICE81_V SVC3
+	LEFT JOIN (
+		SELECT PK_C,
+			PK__BINDADDRESS_C
+		FROM BB_SERVICEACCESSPOINT13_V
+		) SAP3 ON SVC3.PK__PRIMARYSAP_C = SAP3.PK_C
+	LEFT JOIN (
+		SELECT PK_C,
+			PORTNUMBER_C,
+			PK__PRIMARYIPADDRESS_C
+		FROM BB_BINDADDRESS67_V
+		) BA3 ON SAP3.PK__BINDADDRESS_C = BA3.PK_C
+	LEFT JOIN (
+		SELECT PK_C,
+			STRINGNOTATION_C
+		FROM BB_IPADDRESS73_V
+		) IP3 ON BA3.PK__PRIMARYIPADDRESS_C = IP3.PK_C
+	LEFT JOIN (
+		SELECT PK_C,
+			FQDN_C,
+            GUID_C
+		FROM BB_COMPUTERSYSTEM40_V
+		) CS3 ON SVC3.PK__HOST_C = CS3.PK_C
+	) TARGET ON (REL.TARGET_GUID = TARGET.PRIMARY_GUID)</property>
+        </oda-data-set>
+        <oda-data-set extensionID="org.eclipse.birt.report.data.oda.jdbc.JdbcSelectDataSet" name="target systems" id="2541">
+            <list-property name="computedColumns">
+                <structure>
+                    <property name="name">TARGET_PRIMARY_NAME</property>
+                    <expression name="expression">var label = row["TARGET_PRIMARY_LABEL"];
+if (label != null)
+	retVal = label;
+else
+	retVal = row["TARGET_PRIMARY_DISPLAYNAME"];</expression>
+                    <property name="dataType">string</property>
+                </structure>
+                <structure>
+                    <property name="name">SOURCE_PRIMARY_NAME</property>
+                    <expression name="expression">var label = row["SOURCE_PRIMARY_LABEL"];
+if (label != null)
+	retVal = label;
+else
+	retVal = row["SOURCE_PRIMARY_DISPLAYNAME"];</expression>
+                    <property name="dataType">string</property>
+                </structure>
+            </list-property>
+            <list-property name="columnHints">
+                <structure>
+                    <property name="columnName">SOURCE_PRIMARY_GUID</property>
+                    <property name="displayName">SOURCE_PRIMARY_GUID</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_PRIMARY_DISPLAYNAME</property>
+                    <property name="displayName">SOURCE_PRIMARY_DISPLAYNAME</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_PRIMARY_LABEL</property>
+                    <property name="displayName">SOURCE_PRIMARY_LABEL</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_PRIMARY_TYPE</property>
+                    <property name="displayName">SOURCE_PRIMARY_TYPE</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_PK_C</property>
+                    <property name="displayName">SOURCE_PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_HOST__PK_C</property>
+                    <property name="displayName">SOURCE_HOST__PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_HOSTNAME</property>
+                    <property name="displayName">SOURCE_HOSTNAME</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_HOST_GUID</property>
+                    <property name="displayName">SOURCE_HOST_GUID</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_SERV__PK_C</property>
+                    <property name="displayName">SOURCE_SERV__PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_IP_ADDRESS</property>
+                    <property name="displayName">SOURCE_IP_ADDRESS</property>
+                </structure>
+                <structure>
+                    <property name="columnName">SOURCE_PORT</property>
+                    <property name="displayName">SOURCE_PORT</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PRIMARY_GUID</property>
+                    <property name="displayName">TARGET_PRIMARY_GUID</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PRIMARY_DISPLAYNAME</property>
+                    <property name="displayName">TARGET_PRIMARY_DISPLAYNAME</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PRIMARY_LABEL</property>
+                    <property name="displayName">TARGET_PRIMARY_LABEL</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PRIMARY_TYPE</property>
+                    <property name="displayName">TARGET_PRIMARY_TYPE</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PK_C</property>
+                    <property name="displayName">TARGET_PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_HOST__PK_C</property>
+                    <property name="displayName">TARGET_HOST__PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_HOSTNAME</property>
+                    <property name="displayName">TARGET_HOSTNAME</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_SERV__PK_C</property>
+                    <property name="displayName">TARGET_SERV__PK_C</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_IP_ADDRESS</property>
+                    <property name="displayName">TARGET_IP_ADDRESS</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_PORT</property>
+                    <property name="displayName">TARGET_PORT</property>
+                </structure>
+                <structure>
+                    <property name="columnName">TARGET_HOST_GUID</property>
+                    <property name="displayName">TARGET_HOST_GUID</property>
+                </structure>
+                <structure>
+                    <property name="columnName">RELATIONSHIP_TYPE</property>
+                    <property name="displayName">RELATIONSHIP_TYPE</property>
+                </structure>
+            </list-property>
+            <list-property name="filter">
+                <structure>
+                    <property name="operator">is-true</property>
+                    <expression name="expr">//importPackage(Packages.com.collation.platform.model.topology.net);
+importPackage(Packages.com.collation.platform.model);
+
+// don't use IP address to match, use guid or host guid
+//var tgtAddr = row["TARGET_IP_ADDRESS"];
+//if (tgtAddr != null)
+//{
+//	ipAddress = new IpAddressImpl();
+//	ipAddress.setStringNotation(tgtAddr);
+//	ipSet = reportContext.getPersistentGlobalVariable("ipSet");
+
+//	if (ipSet != null &amp;&amp; ipSet.contains(ipAddress))
+//		retVal = true;
+//	else
+//		retVal = false;
+//}
+//else
+//{
+	// no IP address, use guid for computer system
+	
+	// if HOST_GUID is not null that means we need to use the host CS GUID of an AppServer or Service
+	var primGuid = row["TARGET_HOST_GUID"];
+	if (primGuid == null)
+	{
+		// HOST_GUID is null, so use the PRIMARY_GUID which should be of a CS
+		primGuid = row["TARGET_PRIMARY_GUID"];
+	}
+	var guid = new Guid(primGuid);
+	guidSet = reportContext.getPersistentGlobalVariable("guidSet");
+	
+	if (guidSet != null &amp;&amp; guidSet.contains(guid))
+		retVal = true;
+	else
+		retVal = false;
+//}</expression>
+                    <simple-property-list name="value1"/>
+                </structure>
+                <structure>
+                    <property name="operator">is-true</property>
+                    <expression name="expr">var sourcePort = row["SOURCE_PORT"];
+var targetPort = row["TARGET_PORT"];
+var excludePortsParam = params["exclude_ports"];
+
+retVal = true;
+if (excludePortsParam &amp;&amp; params["exclude_ports"].value != null) {
+    var excludedPorts = excludePortsParam.split(",");
+    for (var i = 0; i &lt; excludedPorts.length; i++) {
+        if ((sourcePort &amp;&amp; excludedPorts[i].replace(/^\s+|\s+$/g, '') == sourcePort) || (targetPort &amp;&amp; excludedPorts[i].replace(/^\s+|\s+$/g, '') == targetPort)) {
+            retVal = false;
+            break;
+        }
+    }
+}</expression>
+                </structure>
+                <structure>
+                    <property name="operator">is-true</property>
+                    <expression name="expr">if (params["same_server_relationships"] == true) {
+	retVal = true;
+}
+else {
+	targetHostPK = row["TARGET_HOST__PK_C"]
+	if (targetHostPK != null)
+	{
+		retVal = row["SOURCE_HOST__PK_C"] != targetHostPK;
+	}
+	else
+	{
+		retVal = row["SOURCE_IP_ADDRESS"] != row["TARGET_IP_ADDRESS"];
+	}
+}</expression>
+                    <simple-property-list name="value1"/>
+                </structure>
+                <structure>
+                    <property name="operator">ne</property>
+                    <expression name="expr">row["SOURCE_IP_ADDRESS"]</expression>
+                    <simple-property-list name="value1">
+                        <value>"0:0:0:0:0:0:0:1"</value>
+                    </simple-property-list>
+                </structure>
+                <structure>
+                    <property name="operator">not-like</property>
+                    <expression name="expr">row["SOURCE_IP_ADDRESS"]</expression>
+                    <simple-property-list name="value1">
+                        <value>"127.%"</value>
+                    </simple-property-list>
+                </structure>
+                <structure>
+                    <property name="operator">not-like</property>
+                    <expression name="expr">// Logical Connections can sometimes create duplicates where one address
+// has a special prefix of '0:0:0:0:0:ffff:' for IPv6 compatibility, this removes those
+// duplicates
+row["SOURCE_IP_ADDRESS"]</expression>
+                    <simple-property-list name="value1">
+                        <value>"0:0:0:0:0:ffff:%"</value>
+                    </simple-property-list>
+                </structure>
+            </list-property>
+            <structure name="cachedMetaData">
+                <list-property name="resultSet">
+                    <structure>
+                        <property name="position">1</property>
+                        <property name="name">SOURCE_PRIMARY_GUID</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">2</property>
+                        <property name="name">SOURCE_PRIMARY_DISPLAYNAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">3</property>
+                        <property name="name">SOURCE_PRIMARY_LABEL</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">4</property>
+                        <property name="name">SOURCE_PRIMARY_TYPE</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">5</property>
+                        <property name="name">SOURCE_PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">6</property>
+                        <property name="name">SOURCE_HOST__PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">7</property>
+                        <property name="name">SOURCE_HOSTNAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">8</property>
+                        <property name="name">SOURCE_HOST_GUID</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">9</property>
+                        <property name="name">SOURCE_SERV__PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">10</property>
+                        <property name="name">SOURCE_IP_ADDRESS</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">11</property>
+                        <property name="name">SOURCE_PORT</property>
+                        <property name="dataType">integer</property>
+                    </structure>
+                    <structure>
+                        <property name="position">12</property>
+                        <property name="name">TARGET_PRIMARY_GUID</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">13</property>
+                        <property name="name">TARGET_PRIMARY_DISPLAYNAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">14</property>
+                        <property name="name">TARGET_PRIMARY_LABEL</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">15</property>
+                        <property name="name">TARGET_PRIMARY_TYPE</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">16</property>
+                        <property name="name">TARGET_PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">17</property>
+                        <property name="name">TARGET_HOST__PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">18</property>
+                        <property name="name">TARGET_HOSTNAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">19</property>
+                        <property name="name">TARGET_SERV__PK_C</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">20</property>
+                        <property name="name">TARGET_IP_ADDRESS</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">21</property>
+                        <property name="name">TARGET_PORT</property>
+                        <property name="dataType">integer</property>
+                    </structure>
+                    <structure>
+                        <property name="position">22</property>
+                        <property name="name">TARGET_HOST_GUID</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">23</property>
+                        <property name="name">RELATIONSHIP_TYPE</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">24</property>
+                        <property name="name">TARGET_PRIMARY_NAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">25</property>
+                        <property name="name">SOURCE_PRIMARY_NAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                </list-property>
+            </structure>
+            <property name="dataSource">TADDM Data Source</property>
+            <list-property name="resultSet">
+                <structure>
+                    <property name="position">1</property>
+                    <property name="name">SOURCE_PRIMARY_GUID</property>
+                    <property name="nativeName">SOURCE_PRIMARY_GUID</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">2</property>
+                    <property name="name">SOURCE_PRIMARY_DISPLAYNAME</property>
+                    <property name="nativeName">SOURCE_PRIMARY_DISPLAYNAME</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">3</property>
+                    <property name="name">SOURCE_PRIMARY_LABEL</property>
+                    <property name="nativeName">SOURCE_PRIMARY_LABEL</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">4</property>
+                    <property name="name">SOURCE_PRIMARY_TYPE</property>
+                    <property name="nativeName">SOURCE_PRIMARY_TYPE</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">5</property>
+                    <property name="name">SOURCE_PK_C</property>
+                    <property name="nativeName">SOURCE_PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">6</property>
+                    <property name="name">SOURCE_HOST__PK_C</property>
+                    <property name="nativeName">SOURCE_HOST__PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">7</property>
+                    <property name="name">SOURCE_HOSTNAME</property>
+                    <property name="nativeName">SOURCE_HOSTNAME</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">8</property>
+                    <property name="name">SOURCE_HOST_GUID</property>
+                    <property name="nativeName">SOURCE_HOST_GUID</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">9</property>
+                    <property name="name">SOURCE_SERV__PK_C</property>
+                    <property name="nativeName">SOURCE_SERV__PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">10</property>
+                    <property name="name">SOURCE_IP_ADDRESS</property>
+                    <property name="nativeName">SOURCE_IP_ADDRESS</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">11</property>
+                    <property name="name">SOURCE_PORT</property>
+                    <property name="nativeName">SOURCE_PORT</property>
+                    <property name="dataType">integer</property>
+                    <property name="nativeDataType">4</property>
+                </structure>
+                <structure>
+                    <property name="position">12</property>
+                    <property name="name">TARGET_PRIMARY_GUID</property>
+                    <property name="nativeName">TARGET_PRIMARY_GUID</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">13</property>
+                    <property name="name">TARGET_PRIMARY_DISPLAYNAME</property>
+                    <property name="nativeName">TARGET_PRIMARY_DISPLAYNAME</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">14</property>
+                    <property name="name">TARGET_PRIMARY_LABEL</property>
+                    <property name="nativeName">TARGET_PRIMARY_LABEL</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">15</property>
+                    <property name="name">TARGET_PRIMARY_TYPE</property>
+                    <property name="nativeName">TARGET_PRIMARY_TYPE</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">16</property>
+                    <property name="name">TARGET_PK_C</property>
+                    <property name="nativeName">TARGET_PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">17</property>
+                    <property name="name">TARGET_HOST__PK_C</property>
+                    <property name="nativeName">TARGET_HOST__PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">18</property>
+                    <property name="name">TARGET_HOSTNAME</property>
+                    <property name="nativeName">TARGET_HOSTNAME</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">19</property>
+                    <property name="name">TARGET_SERV__PK_C</property>
+                    <property name="nativeName">TARGET_SERV__PK_C</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">20</property>
+                    <property name="name">TARGET_IP_ADDRESS</property>
+                    <property name="nativeName">TARGET_IP_ADDRESS</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">21</property>
+                    <property name="name">TARGET_PORT</property>
+                    <property name="nativeName">TARGET_PORT</property>
+                    <property name="dataType">integer</property>
+                    <property name="nativeDataType">4</property>
+                </structure>
+                <structure>
+                    <property name="position">22</property>
+                    <property name="name">TARGET_HOST_GUID</property>
+                    <property name="nativeName">TARGET_HOST_GUID</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">23</property>
+                    <property name="name">RELATIONSHIP_TYPE</property>
+                    <property name="nativeName">RELATIONSHIP_TYPE</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+            </list-property>
+            <property name="queryText">SELECT		
+	SOURCE.PRIMARY_GUID AS SOURCE_PRIMARY_GUID,
+	SOURCE.PRIMARY_DISPLAYNAME AS SOURCE_PRIMARY_DISPLAYNAME,
+	SOURCE.PRIMARY_LABEL AS SOURCE_PRIMARY_LABEL,
+	CASE 
+		WHEN SOURCE.PRIMARY_TYPE IS NULL
+			THEN 'ComputerSystem'
+		ELSE SOURCE.PRIMARY_TYPE
+		END AS SOURCE_PRIMARY_TYPE,
+	SOURCE.PK_C AS SOURCE_PK_C,
+	SOURCE.HOST__PK_C AS SOURCE_HOST__PK_C,
+	SOURCE.HOSTNAME AS SOURCE_HOSTNAME,
+	SOURCE.HOST_GUID AS SOURCE_HOST_GUID,
+	SOURCE.SERV__PK_C AS SOURCE_SERV__PK_C,
+	CASE 
+		WHEN REL.SOURCE_IP IS NULL
+			THEN SOURCE.IP_ADDRESS
+		ELSE REL.SOURCE_IP
+		END AS SOURCE_IP_ADDRESS,
+	CASE 
+		WHEN REL.SOURCE_PORT IS NULL
+			THEN SOURCE.PORT
+		ELSE REL.SOURCE_PORT
+		END AS SOURCE_PORT,
+    
+	TARGET.PRIMARY_GUID AS TARGET_PRIMARY_GUID,
+	TARGET.PRIMARY_DISPLAYNAME AS TARGET_PRIMARY_DISPLAYNAME,
+	TARGET.PRIMARY_LABEL AS TARGET_PRIMARY_LABEL,
+	TARGET.PRIMARY_TYPE AS TARGET_PRIMARY_TYPE,
+	TARGET.PK_C AS TARGET_PK_C,
+	TARGET.HOST__PK_C AS TARGET_HOST__PK_C,
+	TARGET.HOSTNAME AS TARGET_HOSTNAME,
+	TARGET.SERV__PK_C AS TARGET_SERV__PK_C,
+	CASE 
+		WHEN TARGET.IP_ADDRESS IS NULL
+			THEN REL.TARGET_IP
+		ELSE TARGET.IP_ADDRESS
+		END AS TARGET_IP_ADDRESS,
+	CASE 
+		WHEN TARGET.PORT IS NULL
+			THEN REL.TARGET_PORT
+		ELSE TARGET.PORT
+		END AS TARGET_PORT,
+	TARGET.HOST_GUID AS TARGET_HOST_GUID,
+	
+	REL.JDOCLASS_C AS RELATIONSHIP_TYPE		
+from (
+	select
+		R1.JDOCLASS_C, 
+		S1.SOURCE_GUID AS SOURCE_GUID,
+		T1.TARGET_GUID AS TARGET_GUID,
+        null AS TARGET_IP,
+        null AS TARGET_PORT,
+        null AS SOURCE_IP,
+        null AS SOURCE_PORT
+	from
+		BB_RELATIONSHIP26_V R1
+
+	left outer join (
+		select
+			P1.GUID_C AS SOURCE_GUID,
+			P1.NAME_C AS SOURCE_NAME,
+			P1.CLASSNAME_C AS SOURCE_CLASS
+		from
+			BB_PERSOBJ_V P1
+	) S1 on R1.SOURCE_C = S1.SOURCE_GUID
+
+	left outer join (
+		select
+			P2.GUID_C AS TARGET_GUID,
+			P2.NAME_C AS TARGET_NAME,
+			P2.CLASSNAME_C AS TARGET_CLASS
+		from 
+			BB_PERSOBJ_V P2
+	) T1 on R1.TARGET_C = T1.TARGET_GUID
+
+	where
+		R1.JDOCLASS_C IN ( 
+			'com.collation.topomgr.jdo.topology.app.dependencies.TransactionalDependencyJdo',
+			'com.collation.topomgr.jdo.topology.app.dependencies.IpDependencyJdo',
+			'com.collation.topomgr.jdo.topology.app.dependencies.ServiceDependencyJdo'
+		)
+
+	UNION
+
+	select
+		NC1.JDOCLASS_C,
+		CS4.GUID_C AS SOURCE_GUID,
+		CS5.GUID_C AS TARGET_GUID,
+        null AS TARGET_IP,
+        null AS TARGET_PORT,
+        null AS SOURCE_IP,
+        null AS SOURCE_PORT
+	from
+		BB_NETWORKCONNECTION38_V NC1, BB_COMPUTERSYSTEM40_V CS4, BB_COMPUTERSYSTEM40_V CS5
+	where
+		NC1.PK__FROMCOMPUTERSYSTEM_C = CS4.PK_C and
+		NC1.PK__TOCOMPUTERSYSTEM_C = CS5.PK_C
+        
+	UNION
+	
+	select LC1.JDOCLASS_C,
+		CS6.GUID_C AS SOURCE_GUID,
+		-- LogConns are attached to the source side RTP, so we only know IP/port about target
+		null AS TARGET_GUID,
+		LC1.TOIP_C AS TARGET_IP,
+		LC1.TOPORT_C AS TARGET_PORT,
+		LC1.FROMIP_C AS SOURCE_IP,
+		LC1.FROMPORT_C AS SOURCE_PORT
+	from BB_LOGICALCONNECTION89_V LC1,
+		BB_RUNTIMEPROCESS15_V RT1,
+		BB_OPERATINGSYSTEM62_V OS1,
+		BB_COMPUTERSYSTEM40_V CS6
+	where LC1.PK__PARENTLOGICALCONNECTION_C = RT1.PK_C
+		and RT1.PK__PARENTRUNTIMEPROCESS_C = OS1.PK_C
+		and OS1.PK__PARENTOPERATINGSYSTEM_C = CS6.PK_C
+		and RT1.PK_C not in (
+				select PK__RUNTIMEPROCESSES_C
+				from BB_PROCESSPOOLJSSES_D8D4C105J
+				)
+
+	UNION
+
+	select LC2.JDOCLASS_C,
+		APP1.GUID_C AS SOURCE_GUID,
+		-- LogConns are attached to the source side RTP, so we only know IP/port about target
+		null AS TARGET_GUID,
+		LC2.TOIP_C AS TARGET_IP,
+		LC2.TOPORT_C AS TARGET_PORT,
+		LC2.FROMIP_C AS SOURCE_IP,
+		LC2.FROMPORT_C AS SOURCE_PORT
+	from BB_LOGICALCONNECTION89_V LC2,
+		BB_RUNTIMEPROCESS15_V RT2,
+		BB_PROCESSPOOLJSSES_D8D4C105J RTPP1,
+		BB_PROCESSPOOL39_V PP1,
+		BB_APPSERVER6_V APP1
+	where LC2.PK__PARENTLOGICALCONNECTION_C = RT2.PK_C
+		and RT2.PK_C = RTPP1.PK__RUNTIMEPROCESSES_C
+		and RTPP1.PK__JDOID_C = PP1.PK_C
+		and PP1.PK__PARENTPROCESSPOOL_C = APP1.PK_C
+        
+) REL
+
+
+inner join (
+	select
+		CS1.GUID_C AS PRIMARY_GUID,
+		CS1.DISPLAYNAME_C AS PRIMARY_DISPLAYNAME,
+		CS1.LABEL_C AS PRIMARY_LABEL,
+        CASE 
+            WHEN CS1.JDOCLASS_C = 'com.collation.topomgr.jdo.topology.sys.windows.WindowsComputerSystemJdo'
+                THEN 'Windows'
+            WHEN CS1.JDOCLASS_C = 'com.collation.topomgr.jdo.topology.sys.linux.LinuxUnitaryComputerSystemJdo'
+                THEN 'Linux'
+            WHEN CS1.JDOCLASS_C = 'com.collation.topomgr.jdo.topology.sys.sun.SunSPARCUnitaryComputerSystemJdo'
+                THEN 'Solaris'
+            WHEN CS1.JDOCLASS_C = 'com.collation.topomgr.jdo.topology.sys.aix.AixUnitaryComputerSystemJdo'
+                THEN 'AIX'
+            WHEN CS1.JDOCLASS_C = 'com.collation.topomgr.jdo.topology.sys.vmware.VmwareUnitaryComputerSystemJdo'
+                THEN 'VMware ESX'
+            ELSE CS1.TYPE_C
+            END AS PRIMARY_TYPE,
+        -- replaced with above
+		--CS1.TYPE_C AS PRIMARY_TYPE
+		CS1.PK_C AS PK_C,
+		CS1.PK_C AS HOST__PK_C, 
+		CS1.FQDN_C AS HOSTNAME,
+        CS1.GUID_C AS HOST_GUID,
+
+		case
+			when 1 = 1 then null
+			else '0'
+		end AS SERV__PK_C,
+
+        -- relationships to computer systems aren't IP specific
+		--BB_IPADDRESS73_V.STRINGNOTATION_C AS IP_ADDRESS,
+		NULL AS IP_ADDRESS,
+	
+		case
+			when 1 = 1 then null
+			else 0
+		end AS PORT
+
+	from 
+		BB_COMPUTERSYSTEM40_V CS1
+			
+   	--left outer join BB_IPINTERFACE96_V on BB_IPINTERFACE96_V.PK__PARENTIPINTERFACE_C = CS1.PK_C
+   	--left outer join BB_IPADDRESS73_V on BB_IPADDRESS73_V.PK_C = BB_IPINTERFACE96_V.PK__IPADDRESS_C
+	
+
+	UNION
+
+
+	select
+		APP2.GUID_C AS PRIMARY_GUID,
+
+		case
+			when (APP2.PRODUCTNAME_C is not null and APP2.PRODUCTNAME_C != '') then APP2.PRODUCTNAME_C
+			else APP2.DISPLAYNAME_C
+		end AS PRIMARY_DISPLAYNAME,
+        
+        null AS PRIMARY_LABEL,
+		
+        case
+			when (APP2.OBJECTTYPE_C is not null and APP2.OBJECTTYPE_C != '') then APP2.OBJECTTYPE_C
+            when (APP2.KEYNAME_C is not null and APP2.KEYNAME_C != '') then APP2.KEYNAME_C
+            when (APP2.JDOCLASS_C like '%MQQueueManagerJdo' or APP2.JDOCLASS_C like '%MQSubsystemJdo') then 'Queue Manager'
+            when (APP2.JDOCLASS_C like '%DB2SubsystemJdo') then 'Database'
+			else 'AppServer'
+		end AS PRIMARY_TYPE,
+	
+		APP2.PK_C AS PK_C,
+		APP2.PK__HOST_C AS HOST__PK_C,
+		CS2.FQDN_C AS HOSTNAME,
+        CS2.GUID_C AS HOST_GUID,
+		APP2.PK_C AS SERV__PK_C,
+		IP2.STRINGNOTATION_C AS IP_ADDRESS,
+		BA2.PORTNUMBER_C AS PORT
+
+	from
+		BB_APPSERVER6_V APP2
+			
+	left outer join (
+		select
+			PK_C, 
+			PORTNUMBER_C,
+			PK__PRIMARYIPADDRESS_C
+		from
+			BB_BINDADDRESS67_V
+	) BA2 on APP2.PK__PRIMARYSAP_C = BA2.PK_C
+
+	left outer join ( 
+		select 
+			PK_C, 
+			STRINGNOTATION_C 
+		from 
+			BB_IPADDRESS73_V
+	) IP2 on BA2.PK__PRIMARYIPADDRESS_C = IP2.PK_C
+
+	left outer join ( 
+		select 
+			PK_C, 
+			FQDN_C,
+            GUID_C
+		from
+			BB_COMPUTERSYSTEM40_V
+	) CS2 on APP2.PK__HOST_C = CS2.PK_C
+		
+		
+	
+	UNION
+
+
+	select
+		SVC3.GUID_C AS PRIMARY_GUID,
+
+		case
+			when (SVC3.NAME_C is not null and SVC3.NAME_C != '') then SVC3.NAME_C
+			else SVC3.DISPLAYNAME_C
+		end AS PRIMARY_DISPLAYNAME,
+
+        null AS PRIMARY_LABEL,
+        
+		case
+			when (SVC3.OBJECTTYPE_C is not null and SVC3.OBJECTTYPE_C != '') then SVC3.OBJECTTYPE_C
+			else SVC3.PRODUCTNAME_C
+		end AS PRIMARY_TYPE,
+	
+		SVC3.PK_C AS PK_C,
+		SVC3.PK__HOST_C AS HOST__PK_C,
+		CS3.FQDN_C AS HOSTNAME,
+        CS3.GUID_C AS HOST_GUID,
+		SVC3.PK_C AS SERV__PK_C,
+		IP3.STRINGNOTATION_C AS IP_ADDRESS,
+		BA3.PORTNUMBER_C AS PORT
+
+	from
+		BB_SERVICE81_V SVC3
+
+	left outer join (
+		select
+			PK_C,
+			PK__BINDADDRESS_C
+		from
+			BB_SERVICEACCESSPOINT13_V
+	) SAP3 on SVC3.PK__PRIMARYSAP_C = SAP3.PK_C
+	
+	left outer join (
+		select
+			PK_C, 
+			PORTNUMBER_C,
+			PK__PRIMARYIPADDRESS_C
+		from
+			BB_BINDADDRESS67_V
+	) BA3 on SAP3.PK__BINDADDRESS_C = BA3.PK_C
+
+	left outer join ( 
+		select 
+			PK_C, 
+			STRINGNOTATION_C 
+		from 
+			BB_IPADDRESS73_V
+	) IP3 on BA3.PK__PRIMARYIPADDRESS_C = IP3.PK_C
+
+	left outer join ( 
+		select 
+			PK_C, 
+			FQDN_C,
+            GUID_C
+		from
+			BB_COMPUTERSYSTEM40_V
+	) CS3 on SVC3.PK__HOST_C = CS3.PK_C
+		
+) SOURCE on (REL.SOURCE_GUID = SOURCE.PRIMARY_GUID)
+
+inner join (
+	select
+		CS1.GUID_C AS PRIMARY_GUID,
+		CS1.DISPLAYNAME_C AS PRIMARY_DISPLAYNAME,
+		CS1.LABEL_C AS PRIMARY_LABEL,
+        CASE 
+            WHEN CS1.JDOCLASS_C = 'com.collation.topomgr.jdo.topology.sys.windows.WindowsComputerSystemJdo'
+                THEN 'Windows'
+            WHEN CS1.JDOCLASS_C = 'com.collation.topomgr.jdo.topology.sys.linux.LinuxUnitaryComputerSystemJdo'
+                THEN 'Linux'
+            WHEN CS1.JDOCLASS_C = 'com.collation.topomgr.jdo.topology.sys.sun.SunSPARCUnitaryComputerSystemJdo'
+                THEN 'Solaris'
+            WHEN CS1.JDOCLASS_C = 'com.collation.topomgr.jdo.topology.sys.aix.AixUnitaryComputerSystemJdo'
+                THEN 'AIX'
+            WHEN CS1.JDOCLASS_C = 'com.collation.topomgr.jdo.topology.sys.vmware.VmwareUnitaryComputerSystemJdo'
+                THEN 'VMware ESX'
+            ELSE CS1.TYPE_C
+            END AS PRIMARY_TYPE,
+        -- replaced with above
+		--CS1.TYPE_C AS PRIMARY_TYPE
+		CS1.PK_C AS PK_C,
+		CS1.PK_C AS HOST__PK_C, 
+        CASE 
+			WHEN CS1.FQDN_C IS NULL
+				THEN CS1.NAME_C
+			ELSE CS1.FQDN_C
+		END AS HOSTNAME,
+		--CS1.FQDN_C AS HOSTNAME,
+
+		case
+			when 1 = 1 then null
+			else '0'
+		end AS SERV__PK_C,
+
+        -- relationships to computer systems aren't IP specific
+		--BB_IPADDRESS73_V.STRINGNOTATION_C AS IP_ADDRESS,
+		NULL AS IP_ADDRESS,
+		
+		case
+			when 1 = 1 then null
+			else 0
+		end AS PORT,
+        NULL AS HOST_GUID
+
+	from 
+		BB_COMPUTERSYSTEM40_V CS1
+			
+   	--left outer join BB_IPINTERFACE96_V on BB_IPINTERFACE96_V.PK__PARENTIPINTERFACE_C = CS1.PK_C
+   	--left outer join BB_IPADDRESS73_V on BB_IPADDRESS73_V.PK_C = BB_IPINTERFACE96_V.PK__IPADDRESS_C
+   	
+	UNION
+
+
+	select
+		APP2.GUID_C AS PRIMARY_GUID,
+
+		case
+			when (APP2.PRODUCTNAME_C is not null and APP2.PRODUCTNAME_C != '') then APP2.PRODUCTNAME_C
+			else APP2.DISPLAYNAME_C
+		end AS PRIMARY_DISPLAYNAME,
+
+        null AS PRIMARY_LABEL,
+        
+		case
+			when (APP2.OBJECTTYPE_C is not null and APP2.OBJECTTYPE_C != '') then APP2.OBJECTTYPE_C
+            when (APP2.KEYNAME_C is not null and APP2.KEYNAME_C != '') then APP2.KEYNAME_C
+            when (APP2.JDOCLASS_C like '%MQQueueManagerJdo' or APP2.JDOCLASS_C like '%MQSubsystemJdo') then 'Queue Manager'
+            when (APP2.JDOCLASS_C like '%DB2SubsystemJdo') then 'Database'
+			else 'AppServer'
+		end AS PRIMARY_TYPE,
+	
+		APP2.PK_C AS PK_C,
+		APP2.PK__HOST_C AS HOST__PK_C,
+        CASE 
+			WHEN CS2.FQDN_C IS NULL
+				THEN CS2.NAME_C
+			ELSE CS2.FQDN_C
+		END AS HOSTNAME,
+		--CS2.FQDN_C AS HOSTNAME,
+		APP2.PK_C AS SERV__PK_C,
+		IP2.STRINGNOTATION_C AS IP_ADDRESS,
+		BA2.PORTNUMBER_C AS PORT,
+        CS2.GUID_C AS HOST_GUID
+
+	from
+		BB_APPSERVER6_V APP2
+			
+	left outer join (
+		select
+			PK_C, 
+			PORTNUMBER_C,
+			PK__PRIMARYIPADDRESS_C
+		from
+			BB_BINDADDRESS67_V
+	) BA2 on APP2.PK__PRIMARYSAP_C = BA2.PK_C
+
+	left outer join ( 
+		select 
+			PK_C, 
+			STRINGNOTATION_C 
+		from 
+			BB_IPADDRESS73_V
+	) IP2 on BA2.PK__PRIMARYIPADDRESS_C = IP2.PK_C
+
+	left outer join ( 
+		select 
+			PK_C, 
+			FQDN_C,
+			NAME_C,
+            GUID_C
+		from
+			BB_COMPUTERSYSTEM40_V
+	) CS2 on APP2.PK__HOST_C = CS2.PK_C
+		
+		
+	
+	UNION
+
+
+	select
+		SVC3.GUID_C AS PRIMARY_GUID,
+
+		case
+			when (SVC3.NAME_C is not null and SVC3.NAME_C != '') then SVC3.NAME_C
+			else SVC3.DISPLAYNAME_C
+		end AS PRIMARY_DISPLAYNAME,
+
+        null AS PRIMARY_LABEL,
+        
+		case
+			when (SVC3.OBJECTTYPE_C is not null and SVC3.OBJECTTYPE_C != '') then SVC3.OBJECTTYPE_C
+			else SVC3.PRODUCTNAME_C
+		end AS PRIMARY_TYPE,
+	
+		SVC3.PK_C AS PK_C,
+		SVC3.PK__HOST_C AS HOST__PK_C,
+        CASE 
+			WHEN CS3.FQDN_C IS NULL
+				THEN CS3.NAME_C
+			ELSE CS3.FQDN_C
+		END AS HOSTNAME,
+		--CS3.FQDN_C AS HOSTNAME,
+		SVC3.PK_C AS SERV__PK_C,
+		IP3.STRINGNOTATION_C AS IP_ADDRESS,
+		BA3.PORTNUMBER_C AS PORT,
+        CS3.GUID_C AS HOST_GUID
+
+	from
+		BB_SERVICE81_V SVC3
+
+	left outer join (
+		select
+			PK_C,
+			PK__BINDADDRESS_C
+		from
+			BB_SERVICEACCESSPOINT13_V
+	) SAP3 on SVC3.PK__PRIMARYSAP_C = SAP3.PK_C
+	
+	left outer join (
+		select
+			PK_C, 
+			PORTNUMBER_C,
+			PK__PRIMARYIPADDRESS_C
+		from
+			BB_BINDADDRESS67_V
+	) BA3 on SAP3.PK__BINDADDRESS_C = BA3.PK_C
+
+	left outer join ( 
+		select 
+			PK_C, 
+			STRINGNOTATION_C 
+		from 
+			BB_IPADDRESS73_V
+	) IP3 on BA3.PK__PRIMARYIPADDRESS_C = IP3.PK_C
+
+	left outer join ( 
+		select 
+			PK_C, 
+			FQDN_C,
+			NAME_C,
+            GUID_C
+		from
+			BB_COMPUTERSYSTEM40_V
+	) CS3 on SVC3.PK__HOST_C = CS3.PK_C
+		
+) TARGET on (REL.TARGET_GUID = TARGET.PRIMARY_GUID)</property>
+        </oda-data-set>
+        <oda-data-set extensionID="org.eclipse.birt.report.data.oda.jdbc.JdbcSelectDataSet" name="allHosts" id="1662">
+            <list-property name="columnHints">
+                <structure>
+                    <property name="columnName">name</property>
+                    <property name="displayName">name</property>
+                </structure>
+                <structure>
+                    <property name="columnName">guid</property>
+                    <property name="displayName">guid</property>
+                </structure>
+            </list-property>
+            <structure name="cachedMetaData">
+                <list-property name="resultSet">
+                    <structure>
+                        <property name="position">1</property>
+                        <property name="name">name</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">2</property>
+                        <property name="name">guid</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                </list-property>
+            </structure>
+            <property name="dataSource">TADDM Data Source</property>
+            <list-property name="resultSet">
+                <structure>
+                    <property name="position">1</property>
+                    <property name="name">name</property>
+                    <property name="nativeName">name</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">2</property>
+                    <property name="name">guid</property>
+                    <property name="nativeName">guid</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+            </list-property>
+            <property name="queryText">select 
+ DISPLAYNAME_C as "name",
+ GUID_C as "guid"
+from BB_COMPUTERSYSTEM40_V
+where
+ TYPE_C != 'IpDevice'</property>
+        </oda-data-set>
+        <oda-data-set extensionID="org.eclipse.birt.report.data.oda.jdbc.JdbcSelectDataSet" name="selectedHosts" id="2471">
+            <list-property name="computedColumns">
+                <structure>
+                    <property name="name">store</property>
+                    <expression name="expression">//Logger.getAnonymousLogger().info("Computing column 'store'");
+
+var scopeId = reportContext.getPersistentGlobalVariable("scopeId");
+if (scopeId == null || !scopeId) {
+    scopeId = row["guid"];
+    reportContext.setPersistentGlobalVariable("scopeId", scopeId);
+}
+
+var messageParams = new Array(1);
+messageParams[0] = row["name"];
+retVal = "• " + reportContext.getMessage("scope_with_variable", reportContext.getLocale(), messageParams);</expression>
+                    <property name="dataType">any</property>
+                </structure>
+            </list-property>
+            <list-property name="columnHints">
+                <structure>
+                    <property name="columnName">name</property>
+                    <property name="displayName">name</property>
+                </structure>
+                <structure>
+                    <property name="columnName">guid</property>
+                    <property name="displayName">guid</property>
+                </structure>
+            </list-property>
+            <structure name="cachedMetaData">
+                <list-property name="resultSet">
+                    <structure>
+                        <property name="position">1</property>
+                        <property name="name">name</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">2</property>
+                        <property name="name">guid</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">3</property>
+                        <property name="name">store</property>
+                        <property name="dataType">any</property>
+                    </structure>
+                </list-property>
+            </structure>
+            <property name="dataSource">TADDM Data Source</property>
+            <list-property name="parameters">
+                <structure>
+                    <property name="name">hostGUID</property>
+                    <property name="paramName">host</property>
+                    <property name="nativeName"></property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                    <property name="position">1</property>
+                    <property name="isOptional">true</property>
+                    <property name="allowNull">true</property>
+                    <property name="isInput">true</property>
+                    <property name="isOutput">false</property>
+                </structure>
+            </list-property>
+            <list-property name="resultSet">
+                <structure>
+                    <property name="position">1</property>
+                    <property name="name">name</property>
+                    <property name="nativeName">name</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">2</property>
+                    <property name="name">guid</property>
+                    <property name="nativeName">guid</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+            </list-property>
+            <property name="queryText">select
+	DISPLAYNAME_C as "name",
+	GUID_C as "guid"
+from
+	BB_COMPUTERSYSTEM40_V
+where GUID_C = ?</property>
+            <xml-property name="designerValues"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<model:DesignValues xmlns:design="http://www.eclipse.org/datatools/connectivity/oda/design" xmlns:model="http://www.eclipse.org/birt/report/model/adapter/odaModel">
+  <Version>1.0</Version>
+  <design:DataSetParameters>
+    <design:parameterDefinitions>
+      <design:inOutMode>In</design:inOutMode>
+      <design:attributes>
+        <design:name></design:name>
+        <design:position>1</design:position>
+        <design:nativeDataTypeCode>12</design:nativeDataTypeCode>
+        <design:nullability>Nullable</design:nullability>
+        <design:uiHints/>
+      </design:attributes>
+      <design:inputAttributes>
+        <design:elementAttributes>
+          <design:optional>true</design:optional>
+          <design:masksValue>false</design:masksValue>
+          <design:dynamicValueChoices>
+            <design:dataSetDesign>
+              <design:name>allHosts</design:name>
+              <design:odaExtensionDataSetId>org.eclipse.birt.report.data.oda.jdbc.JdbcSelectDataSet</design:odaExtensionDataSetId>
+              <design:dataSourceDesign>
+                <design:name>TADDM Data Source</design:name>
+                <design:odaExtensionId>org.eclipse.birt.report.data.oda.jdbc</design:odaExtensionId>
+                <design:publicProperties>
+                  <design:properties>
+                    <design:nameValue>
+                      <design:name>odaDriverClass</design:name>
+                      <design:value>com.ibm.db2.jcc.DB2Driver</design:value>
+                    </design:nameValue>
+                  </design:properties>
+                  <design:properties>
+                    <design:nameValue>
+                      <design:name>odaURL</design:name>
+                      <design:value>jdbc:db2://julie:60007/demo720</design:value>
+                    </design:nameValue>
+                  </design:properties>
+                  <design:properties>
+                    <design:nameValue>
+                      <design:name>odaUser</design:name>
+                      <design:value>db2inst1</design:value>
+                    </design:nameValue>
+                  </design:properties>
+                  <design:properties>
+                    <design:nameValue>
+                      <design:name>odaPassword</design:name>
+                      <design:value>t1vol1</design:value>
+                    </design:nameValue>
+                  </design:properties>
+                  <design:properties>
+                    <design:nameValue>
+                      <design:name>odaJndiName</design:name>
+                    </design:nameValue>
+                  </design:properties>
+                  <design:properties>
+                    <design:nameValue>
+                      <design:name>OdaConnProfileName</design:name>
+                    </design:nameValue>
+                  </design:properties>
+                  <design:properties>
+                    <design:nameValue>
+                      <design:name>OdaConnProfileStorePath</design:name>
+                    </design:nameValue>
+                  </design:properties>
+                </design:publicProperties>
+              </design:dataSourceDesign>
+              <design:query>
+                <design:queryText>select 
+ DISPLAYNAME_C as &quot;name&quot;,
+ GUID_C as &quot;guid&quot;
+from BB_COMPUTERSYSTEM40_V</design:queryText>
+              </design:query>
+              <design:publicProperties>
+                <design:properties>
+                  <design:nameValue>
+                    <design:name>queryTimeOut</design:name>
+                  </design:nameValue>
+                </design:properties>
+              </design:publicProperties>
+              <design:resultSets>
+                <design:resultSetDefinitions>
+                  <design:resultSetColumns>
+                    <design:resultColumnDefinitions>
+                      <design:attributes>
+                        <design:name>name</design:name>
+                        <design:position>1</design:position>
+                        <design:nativeDataTypeCode>12</design:nativeDataTypeCode>
+                        <design:uiHints>
+                          <design:displayName>name</design:displayName>
+                        </design:uiHints>
+                      </design:attributes>
+                    </design:resultColumnDefinitions>
+                    <design:resultColumnDefinitions>
+                      <design:attributes>
+                        <design:name>guid</design:name>
+                        <design:position>2</design:position>
+                        <design:nativeDataTypeCode>12</design:nativeDataTypeCode>
+                        <design:uiHints>
+                          <design:displayName>guid</design:displayName>
+                        </design:uiHints>
+                      </design:attributes>
+                    </design:resultColumnDefinitions>
+                  </design:resultSetColumns>
+                </design:resultSetDefinitions>
+              </design:resultSets>
+            </design:dataSetDesign>
+            <design:enabled>true</design:enabled>
+            <design:valueColumn>dataSetRow[&quot;guid&quot;]</design:valueColumn>
+            <design:displayNameColumn>dataSetRow[&quot;name&quot;]</design:displayNameColumn>
+          </design:dynamicValueChoices>
+          <design:uiHints>
+            <design:promptStyle>SelectableListWithTextField</design:promptStyle>
+          </design:uiHints>
+        </design:elementAttributes>
+      </design:inputAttributes>
+    </design:parameterDefinitions>
+  </design:DataSetParameters>
+  <design:ResultSets derivedMetaData="true">
+    <design:resultSetDefinitions>
+      <design:resultSetColumns>
+        <design:resultColumnDefinitions>
+          <design:attributes>
+            <design:name>name</design:name>
+            <design:position>1</design:position>
+            <design:nativeDataTypeCode>12</design:nativeDataTypeCode>
+            <design:precision>192</design:precision>
+            <design:scale>0</design:scale>
+            <design:nullability>Nullable</design:nullability>
+            <design:uiHints>
+              <design:displayName>name</design:displayName>
+            </design:uiHints>
+          </design:attributes>
+          <design:usageHints>
+            <design:label>name</design:label>
+            <design:formattingHints>
+              <design:displaySize>192</design:displaySize>
+            </design:formattingHints>
+          </design:usageHints>
+        </design:resultColumnDefinitions>
+        <design:resultColumnDefinitions>
+          <design:attributes>
+            <design:name>guid</design:name>
+            <design:position>2</design:position>
+            <design:nativeDataTypeCode>12</design:nativeDataTypeCode>
+            <design:precision>192</design:precision>
+            <design:scale>0</design:scale>
+            <design:nullability>Nullable</design:nullability>
+            <design:uiHints>
+              <design:displayName>guid</design:displayName>
+            </design:uiHints>
+          </design:attributes>
+          <design:usageHints>
+            <design:label>guid</design:label>
+            <design:formattingHints>
+              <design:displaySize>192</design:displaySize>
+            </design:formattingHints>
+          </design:usageHints>
+        </design:resultColumnDefinitions>
+      </design:resultSetColumns>
+    </design:resultSetDefinitions>
+  </design:ResultSets>
+</model:DesignValues>]]></xml-property>
+        </oda-data-set>
+        <oda-data-set extensionID="org.eclipse.birt.report.data.oda.jdbc.JdbcSelectDataSet" name="business applications" id="3437">
+            <list-property name="columnHints">
+                <structure>
+                    <property name="columnName">APP_NAME</property>
+                    <property name="displayName">APP_NAME</property>
+                </structure>
+                <structure>
+                    <property name="columnName">CS_NAME</property>
+                    <property name="displayName">CS_NAME</property>
+                </structure>
+                <structure>
+                    <property name="columnName">CS_GUID</property>
+                    <property name="displayName">CS_GUID</property>
+                </structure>
+            </list-property>
+            <list-property name="filter">
+                <structure>
+                    <property name="operator">is-true</property>
+                    <expression name="expr">// get selected GUID
+var guid = reportContext.getPersistentGlobalVariable("scopeId");
+
+// get GUID for this row
+var csGuid = row["CS_GUID"];
+
+// if GUID for this row is equal to the selected GUID, show this row else filter it out
+if (guid == csGuid)
+	retVal = true;
+else
+	retVal = false;</expression>
+                </structure>
+            </list-property>
+            <structure name="cachedMetaData">
+                <list-property name="resultSet">
+                    <structure>
+                        <property name="position">1</property>
+                        <property name="name">APP_NAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">2</property>
+                        <property name="name">CS_NAME</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                    <structure>
+                        <property name="position">3</property>
+                        <property name="name">CS_GUID</property>
+                        <property name="dataType">string</property>
+                    </structure>
+                </list-property>
+            </structure>
+            <property name="dataSource">TADDM Data Source</property>
+            <list-property name="resultSet">
+                <structure>
+                    <property name="position">1</property>
+                    <property name="name">APP_NAME</property>
+                    <property name="nativeName">APP_NAME</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">2</property>
+                    <property name="name">CS_NAME</property>
+                    <property name="nativeName">CS_NAME</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+                <structure>
+                    <property name="position">3</property>
+                    <property name="name">CS_GUID</property>
+                    <property name="nativeName">CS_GUID</property>
+                    <property name="dataType">string</property>
+                    <property name="nativeDataType">12</property>
+                </structure>
+            </list-property>
+            <property name="queryText">-- old CDM
+--SELECT
+-- APP.DISPLAYNAME_C AS APP_NAME,
+-- CS.DISPLAYNAME_C AS CS_NAME,
+-- CS.GUID_C AS CS_GUID
+--FROM
+-- BB_APPLICATION90_V APP,
+-- BB_APPLICATIONJDO_GROUPS_J APP_FG,
+-- BB_FUNCTIONALGROUP74_V FG,
+-- BB_COLLECTIONJDO_MEMBERS_J FG_CS,
+-- BB_COMPUTERSYSTEM40_V CS
+--WHERE
+-- APP.PK_C = APP_FG.PK__JDOID_C AND
+-- FG.PK_C = APP_FG.PK__GROUPS_C AND 
+-- FG.PK_C = FG_CS.PK__JDOID_C AND 
+-- CS.GUID_C = FG_CS.MEMBERS_C
+
+-- 7.3+ simplified model
+SELECT
+ CSTCOL.DISPLAYNAME_C AS APP_NAME,
+ CS.DISPLAYNAME_C AS CS_NAME,
+ CS.GUID_C AS CS_GUID
+FROM
+ BB_NODE84_V NODE,
+ BB_CUSTOMCOLLECTION23_V CSTCOL,
+ BB_COMPUTERSYSTEM40_V CS
+WHERE
+ NODE.PK__PARENTNODE_C = CSTCOL.PK_C
+ AND NODE.SOURCEGUID_C = CS.GUID_C
+ AND CSTCOL.HIERARCHYTYPE_C = 'BusinessApplication'</property>
+        </oda-data-set>
+    </data-sets>
+    <styles>
+        <style name="crosstab-cell" id="1660">
+            <property name="borderBottomColor">#CCCCCC</property>
+            <property name="borderBottomStyle">solid</property>
+            <property name="borderBottomWidth">1pt</property>
+            <property name="borderLeftColor">#CCCCCC</property>
+            <property name="borderLeftStyle">solid</property>
+            <property name="borderLeftWidth">1pt</property>
+            <property name="borderRightColor">#CCCCCC</property>
+            <property name="borderRightStyle">solid</property>
+            <property name="borderRightWidth">1pt</property>
+            <property name="borderTopColor">#CCCCCC</property>
+            <property name="borderTopStyle">solid</property>
+            <property name="borderTopWidth">1pt</property>
+        </style>
+        <style name="crosstab" id="1661">
+            <property name="borderBottomColor">#CCCCCC</property>
+            <property name="borderBottomStyle">solid</property>
+            <property name="borderBottomWidth">1pt</property>
+            <property name="borderLeftColor">#CCCCCC</property>
+            <property name="borderLeftStyle">solid</property>
+            <property name="borderLeftWidth">1pt</property>
+            <property name="borderRightColor">#CCCCCC</property>
+            <property name="borderRightStyle">solid</property>
+            <property name="borderRightWidth">1pt</property>
+            <property name="borderTopColor">#CCCCCC</property>
+            <property name="borderTopStyle">solid</property>
+            <property name="borderTopWidth">1pt</property>
+        </style>
+    </styles>
+    <page-setup>
+        <simple-master-page name="TCR Master Page" id="1629" extends="TivoliCommonReporting_v1.TCR Master Page">
+            <overridden-values>
+                <ref-entry baseId="9" id="9"/>
+                <ref-entry baseId="10" id="10"/>
+                <ref-entry baseId="11" id="11"/>
+                <ref-entry baseId="12" id="12"/>
+                <ref-entry baseId="13" id="13"/>
+                <ref-entry baseId="37" id="37"/>
+                <ref-entry baseId="14" id="14"/>
+                <ref-entry baseId="38" id="38"/>
+                <ref-entry baseId="19" id="19"/>
+                <ref-entry baseId="20" id="20"/>
+                <ref-entry baseId="301" id="301"/>
+                <ref-entry baseId="21" id="21"/>
+                <ref-entry baseId="22" id="22"/>
+                <ref-entry baseId="23" id="23"/>
+                <ref-entry baseId="1659" name="NewData" id="1659">
+                    <property name="resultSetColumn">Column Binding</property>
+                    <list-property name="boundDataColumns">
+                        <structure>
+                            <property name="name">Column Binding</property>
+                            <property name="displayName">Date</property>
+                            <expression name="expression">var formatString = reportContext.getMessage("dateTimeFormat", reportContext.getLocale());
+var df = new Packages.java.text.SimpleDateFormat(formatString, reportContext.getLocale());
+var date = new Packages.java.util.Date();
+retVal = df.format(date);</expression>
+                            <property name="dataType">string</property>
+                        </structure>
+                    </list-property>
+                </ref-entry>
+                <ref-entry baseId="24" id="24"/>
+                <ref-entry baseId="25" id="25"/>
+                <ref-entry baseId="26" id="26"/>
+                <ref-entry baseId="27" id="27"/>
+                <ref-entry baseId="28" id="28"/>
+                <ref-entry baseId="29" id="29"/>
+                <ref-entry baseId="30" id="30"/>
+                <ref-entry baseId="31" id="31"/>
+                <ref-entry baseId="32" id="32"/>
+                <ref-entry baseId="33" id="33"/>
+                <ref-entry baseId="34" id="34"/>
+                <ref-entry baseId="35" id="35"/>
+            </overridden-values>
+        </simple-master-page>
+    </page-setup>
+    <body>
+        <grid name="Report Introduction" id="223">
+            <property name="width">100%</property>
+            <expression name="bookmark">"Report Introduction"</expression>
+            <column id="224"/>
+            <row id="225">
+                <cell id="226">
+                    <text name="Report Title" id="44">
+                        <property name="style">main-title</property>
+                        <property name="contentType">auto</property>
+                        <text-property name="content"><![CDATA[Server Affinity by Host]]></text-property>
+                    </text>
+                </cell>
+            </row>
+            <row id="2438">
+                <cell id="2439">
+                    <property name="paddingTop">0px</property>
+                    <property name="paddingLeft">0px</property>
+                    <table name="reportParameters" id="2440">
+                        <property name="style">parameter-table</property>
+                        <property name="marginTop">0pt</property>
+                        <property name="width">100%</property>
+                        <property name="dataSet">selectedHosts</property>
+                        <list-property name="boundDataColumns">
+                            <structure>
+                                <property name="name">store</property>
+                                <expression name="expression">dataSetRow["store"]</expression>
+                                <property name="dataType">any</property>
+                            </structure>
+                            <structure>
+                                <property name="name">ipSetConstructor</property>
+                                <expression name="expression">importPackage(Packages.com.collation.platform.ip);
+importPackage(Packages.java.util);
+importPackage(Packages.com.collation.platform.logger);
+importPackage(Packages.com.collation.platform.model);
+importPackage(Packages.com.collation.platform.model.discovery.scope);
+importPackage(Packages.com.collation.platform.model.topology.net);
+importPackage(Packages.com.collation.platform.util);
+importPackage(Packages.com.ibm.cdb.platform.ip);
+importPackage(Packages.com.collation.cdm.discovery.scope.util);
+importPackage(Packages.com.collation.cdm.common.util);
+
+//Logger.getAnonymousLogger().info("Beginning ipSetConstructor");
+
+dataApi = CDMDataHelper.getDataApi();
+// this is the selected guid
+scopeId = reportContext.getPersistentGlobalVariable("scopeId");
+guidSet = new java.util.HashSet();
+guidSet.add(new Guid(scopeId));
+reportContext.setPersistentGlobalVariable("guidSet", guidSet);
+//scope = dataApi.find(new Guid(scopeId), 3, null);
+//ipSet = ScopeToIpSet.convert(scope);
+//reportContext.setPersistentGlobalVariable("ipSet", ipSet);
+
+// collect ips of selected system(s)
+ipSet = new java.util.HashSet();
+if (scopeId != null)
+{
+	var query = "select IpAddress.* from IpInterface, IpAddress where IpInterface.parent.guid == '" + scopeId + "' and IpInterface.ipAddress.guid == IpAddress.guid";
+	var ips = dataApi.find(query, true, null, null);
+	for (var i=0; i &lt; ips.length; i++)
+	{
+		ipSet.add(ips[i]);
+	}
+}
+reportContext.setPersistentGlobalVariable("ipSet", ipSet);
+
+retVal = "";</expression>
+                                <property name="dataType">any</property>
+                            </structure>
+                            <structure>
+                                <property name="name">excludePortsValue</property>
+                                <expression name="expression">if (params["exclude_ports"] == null) {
+    "• " + reportContext.getMessage("exclude_ports_false", reportContext.getLocale());
+}
+else if (params["exclude_ports"] &amp;&amp; params["exclude_ports"].value != null &amp;&amp; params["exclude_ports"].value.length > 0) {
+    var messageParams = new Array(1);
+    messageParams[0] = params["exclude_ports"];
+    "• " + reportContext.getMessage("exclude_ports_with_variable", reportContext.getLocale(), messageParams);
+}
+else {
+    "• " + reportContext.getMessage("exclude_ports_false", reportContext.getLocale());
+}</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">excludePortsDisplay</property>
+                                <expression name="expression">row["excludePortsValue"]</expression>
+                                <property name="dataType">any</property>
+                            </structure>
+                            <structure>
+                                <property name="name">sameServerValue</property>
+                                <expression name="expression">if (params["same_server_relationships"] &amp;&amp; params["same_server_relationships"] == true) {
+    "• " + reportContext.getMessage("same_server_parameter_true", reportContext.getLocale());
+}
+else {
+    "• " + reportContext.getMessage("same_server_parameter_false", reportContext.getLocale());
+}</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">sameServerDisplay</property>
+                                <expression name="expression">row["sameServerValue"]</expression>
+                                <property name="dataType">any</property>
+                            </structure>
+                        </list-property>
+                        <method name="onPrepare"><![CDATA[//Logger.getAnonymousLogger().info("reportParameters onPrepare");]]></method>
+                        <method name="onCreate"><![CDATA[//Logger.getAnonymousLogger().info("reportParameters on Create");]]></method>
+                        <method name="onRender"><![CDATA[//Logger.getAnonymousLogger().info("reportParameters onRender");]]></method>
+                        <method name="onPageBreak"><![CDATA[//Logger.getAnonymousLogger().info("reportParameters onPageBreak");]]></method>
+                        <column id="2465"/>
+                        <column id="2466"/>
+                        <column id="2467"/>
+                        <column id="2468"/>
+                        <column id="2469"/>
+                        <detail>
+                            <row id="2492">
+                                <property name="borderBottomColor">#000000</property>
+                                <property name="borderBottomStyle">dotted</property>
+                                <property name="borderBottomWidth">2px</property>
+                                <cell id="2493">
+                                    <property name="colSpan">5</property>
+                                    <property name="rowSpan">1</property>
+                                    <label id="2498">
+                                        <property name="fontWeight">bold</property>
+                                        <property name="color">#444E68</property>
+                                        <text-property name="text" key="taddm_report_params"></text-property>
+                                    </label>
+                                </cell>
+                            </row>
+                            <row id="2447">
+                                <cell id="2448">
+                                    <data id="2479">
+                                        <property name="resultSetColumn">store</property>
+                                    </data>
+                                </cell>
+                                <cell id="2449">
+                                    <data id="2516">
+                                        <property name="resultSetColumn">ipSetConstructor</property>
+                                    </data>
+                                </cell>
+                                <cell id="2450"/>
+                                <cell id="2451"/>
+                                <cell id="2452"/>
+                            </row>
+                            <row id="2453">
+                                <cell id="2454">
+                                    <data id="3123">
+                                        <property name="resultSetColumn">excludePortsDisplay</property>
+                                    </data>
+                                </cell>
+                                <cell id="2455"/>
+                                <cell id="2456"/>
+                                <cell id="2457"/>
+                                <cell id="2458"/>
+                            </row>
+                            <row id="2499">
+                                <cell id="2500">
+                                    <data id="3125">
+                                        <property name="resultSetColumn">sameServerDisplay</property>
+                                    </data>
+                                </cell>
+                                <cell id="2501"/>
+                                <cell id="2502"/>
+                                <cell id="2503"/>
+                                <cell id="2504"/>
+                            </row>
+                        </detail>
+                    </table>
+                </cell>
+            </row>
+            <row id="3421">
+                <cell id="3422">
+                    <property name="paddingTop">0px</property>
+                    <property name="paddingLeft">0px</property>
+                </cell>
+            </row>
+            <row id="3425">
+                <cell id="3426">
+                    <property name="paddingTop">0px</property>
+                    <property name="paddingLeft">0px</property>
+                </cell>
+            </row>
+        </grid>
+        <grid name="Section 1" id="162">
+            <property name="width">100%</property>
+            <expression name="bookmark">"Section 1"</expression>
+            <column id="163"/>
+            <row id="2517">
+                <cell id="2518">
+                    <property name="paddingTop">10pt</property>
+                </cell>
+            </row>
+            <row id="3569">
+                <cell id="3570">
+                    <property name="paddingTop">10pt</property>
+                    <table name="Table without group 12" id="3571">
+                        <property name="style">table-without-group</property>
+                        <property name="marginTop">15px</property>
+                        <property name="marginBottom">15pt</property>
+                        <property name="marginRight">15pt</property>
+                        <property name="width">100%</property>
+                        <property name="dataSet">business applications</property>
+                        <list-property name="visibility">
+                            <structure>
+                                <property name="format">all</property>
+                                <expression name="valueExpr">setRowCount(Total.count());
+isRowCountZero()</expression>
+                            </structure>
+                        </list-property>
+                        <list-property name="boundDataColumns">
+                            <structure>
+                                <property name="name">APP_NAME</property>
+                                <expression name="expression">dataSetRow["APP_NAME"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">CS_NAME</property>
+                                <expression name="expression">dataSetRow["CS_NAME"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">CS_GUID</property>
+                                <expression name="expression">dataSetRow["CS_GUID"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                        </list-property>
+                        <column id="3658"/>
+                        <column id="3660"/>
+                        <header>
+                            <row id="3572">
+                                <cell id="3573">
+                                    <property name="colSpan">2</property>
+                                    <property name="rowSpan">1</property>
+                                    <property name="style">table-header-cell</property>
+                                    <text name="Section 1 Heading_Sub-title 12" id="3574">
+                                        <property name="fontSize">125%</property>
+                                        <property name="fontWeight">normal</property>
+                                        <property name="contentType">auto</property>
+                                        <text-property name="content"><![CDATA[Business Application Membership]]></text-property>
+                                    </text>
+                                </cell>
+                            </row>
+                            <row id="3575">
+                                <cell id="3576">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3577">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content"><![CDATA[System Name]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3580">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3581">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content"><![CDATA[Application Name]]></text-property>
+                                    </text>
+                                </cell>
+                            </row>
+                        </header>
+                        <group id="3598">
+                            <property name="groupName">csNameId</property>
+                            <property name="interval">none</property>
+                            <property name="sortDirection">asc</property>
+                            <expression name="keyExpr">row["CS_NAME"]</expression>
+                            <structure name="toc">
+                                <expression name="expressionValue">row["CS_NAME"]</expression>
+                            </structure>
+                            <property name="repeatHeader">true</property>
+                            <property name="hideDetail">false</property>
+                            <property name="pageBreakAfter">auto</property>
+                            <property name="pageBreakBefore">auto</property>
+                            <property name="pageBreakInside">auto</property>
+                            <list-property name="sort">
+                                <structure>
+                                    <expression name="key">row["CS_NAME"]</expression>
+                                    <property name="direction">asc</property>
+                                </structure>
+                            </list-property>
+                            <header>
+                                <row id="3599">
+                                    <cell id="3600">
+                                        <data id="3675">
+                                            <property name="resultSetColumn">CS_NAME</property>
+                                        </data>
+                                    </cell>
+                                    <cell id="3604"/>
+                                </row>
+                            </header>
+                            <footer>
+                                <row id="3613">
+                                    <cell id="3614"/>
+                                    <cell id="3616"/>
+                                </row>
+                            </footer>
+                        </group>
+                        <detail>
+                            <row id="3625">
+                                <property name="height">15px</property>
+                                <property name="style">table-details</property>
+                                <cell id="3626">
+                                    <property name="style">table-details</property>
+                                </cell>
+                                <cell id="3628">
+                                    <property name="style">table-details</property>
+                                    <data id="3672">
+                                        <property name="resultSetColumn">APP_NAME</property>
+                                    </data>
+                                </cell>
+                            </row>
+                        </detail>
+                        <footer>
+                            <row id="3646">
+                                <cell id="3647"/>
+                                <cell id="3649"/>
+                            </row>
+                        </footer>
+                    </table>
+                </cell>
+            </row>
+            <row id="3676">
+                <list-property name="visibility">
+                    <structure>
+                        <property name="format">all</property>
+                        <expression name="valueExpr">!isRowCountZero()</expression>
+                    </structure>
+                </list-property>
+                <cell id="3677">
+                    <property name="paddingTop">10pt</property>
+                    <text name="Section 1 Heading_Sub-title 112" id="3678">
+                        <property name="style">sub-title</property>
+                        <property name="fontSize">125%</property>
+                        <property name="fontWeight">normal</property>
+                        <property name="borderTopColor">#000000</property>
+                        <property name="borderTopStyle">solid</property>
+                        <property name="borderTopWidth">medium</property>
+                        <property name="marginTop">0pt</property>
+                        <property name="marginLeft">15pt</property>
+                        <property name="contentType">auto</property>
+                        <text-property name="content"><![CDATA[Business Application Membership]]></text-property>
+                    </text>
+                    <grid name="Information Message Dialog2" id="3679">
+                        <property name="style">message-box-style</property>
+                        <property name="marginTop">0px</property>
+                        <property name="width">90%</property>
+                        <expression name="bookmark">"Info Message"</expression>
+                        <column id="3680">
+                            <property name="width">0.583in</property>
+                        </column>
+                        <column id="3681">
+                            <property name="width">4.6770833333in</property>
+                        </column>
+                        <row id="3682">
+                            <cell id="3683">
+                                <property name="paddingTop">3px</property>
+                                <property name="paddingLeft">10px</property>
+                                <property name="paddingBottom">0pt</property>
+                                <property name="paddingRight">10px</property>
+                                <property name="textAlign">center</property>
+                                <image name="NewImage22" id="3684">
+                                    <property name="source">file</property>
+                                    <expression name="uri">"tcr_common/images/information-2.gif"</expression>
+                                </image>
+                            </cell>
+                            <cell id="3685">
+                                <property name="paddingTop">0px</property>
+                                <property name="paddingLeft">0px</property>
+                                <property name="paddingBottom">0px</property>
+                                <property name="paddingRight">0pt</property>
+                                <text name="NewText22" id="3686">
+                                    <property name="paddingTop">3px</property>
+                                    <property name="contentType">html</property>
+                                    <text-property name="content"><![CDATA[<b><font color="#444E68" style="bold"><VALUE-OF>getNLS("msg_hdr_dataset_empty");</VALUE-OF>  </font></b> <br> <VALUE-OF>getNLS("msg_dataset_empty");</VALUE-OF>  </br>]]></text-property>
+                                </text>
+                            </cell>
+                        </row>
+                    </grid>
+                </cell>
+            </row>
+            <row id="168">
+                <cell id="169">
+                    <property name="paddingTop">10pt</property>
+                    <table name="Table without group 1" id="173">
+                        <property name="style">table-without-group</property>
+                        <property name="marginTop">15px</property>
+                        <property name="marginBottom">15pt</property>
+                        <property name="marginRight">15pt</property>
+                        <property name="width">100%</property>
+                        <property name="dataSet">source systems</property>
+                        <list-property name="visibility">
+                            <structure>
+                                <property name="format">all</property>
+                                <expression name="valueExpr">setRowCount(Total.count());
+isRowCountZero()</expression>
+                            </structure>
+                        </list-property>
+                        <list-property name="boundDataColumns">
+                            <structure>
+                                <property name="name">SOURCE_PRIMARY_GUID</property>
+                                <expression name="expression">dataSetRow["SOURCE_PRIMARY_GUID"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_PRIMARY_NAME</property>
+                                <expression name="expression">dataSetRow["SOURCE_PRIMARY_NAME"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_PRIMARY_TYPE</property>
+                                <expression name="expression">dataSetRow["SOURCE_PRIMARY_TYPE"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_PK_C</property>
+                                <expression name="expression">dataSetRow["SOURCE_PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_HOST__PK_C</property>
+                                <expression name="expression">dataSetRow["SOURCE_HOST__PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_HOSTNAME</property>
+                                <expression name="expression">dataSetRow["SOURCE_HOSTNAME"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_SERV__PK_C</property>
+                                <expression name="expression">dataSetRow["SOURCE_SERV__PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_IP_ADDRESS</property>
+                                <expression name="expression">dataSetRow["SOURCE_IP_ADDRESS"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_PORT</property>
+                                <expression name="expression">dataSetRow["SOURCE_PORT"]</expression>
+                                <property name="dataType">integer</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_PRIMARY_GUID</property>
+                                <expression name="expression">dataSetRow["TARGET_PRIMARY_GUID"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_PRIMARY_NAME</property>
+                                <expression name="expression">if (dataSetRow["TARGET_PRIMARY_NAME"] == null)
+	retVal = dataSetRow["TARGET_PRIMARY_NAME_COMPUTED"];
+else
+	retValue = dataSetRow["TARGET_PRIMARY_NAME"];</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_PRIMARY_TYPE</property>
+                                <expression name="expression">dataSetRow["TARGET_PRIMARY_TYPE"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_PK_C</property>
+                                <expression name="expression">dataSetRow["TARGET_PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_HOST__PK_C</property>
+                                <expression name="expression">dataSetRow["TARGET_HOST__PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_HOSTNAME</property>
+                                <expression name="expression">dataSetRow["TARGET_HOSTNAME"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_SERV__PK_C</property>
+                                <expression name="expression">dataSetRow["TARGET_SERV__PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_IP_ADDRESS</property>
+                                <expression name="expression">dataSetRow["TARGET_IP_ADDRESS"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_PORT</property>
+                                <expression name="expression">dataSetRow["TARGET_PORT"]</expression>
+                                <property name="dataType">integer</property>
+                            </structure>
+                            <structure>
+                                <property name="name">sourcesPerHostId</property>
+                                <property name="dataType">any</property>
+                                <simple-property-list name="aggregateOn">
+                                    <value>sourceHostId</value>
+                                </simple-property-list>
+                                <property name="aggregateFunction">COUNT</property>
+                            </structure>
+                            <structure>
+                                <property name="name">relationshipType</property>
+                                <expression name="expression">retVal = "";
+
+if (row["RELATIONSHIP_TYPE"].equals("com.collation.topomgr.jdo.topology.net.NetworkConnectionJdo")) {
+    retVal = reportContext.getMessage("network_connection", reportContext.getLocale());
+}
+else if (row["RELATIONSHIP_TYPE"].equals("com.collation.topomgr.jdo.topology.app.dependencies.TransactionalDependencyJdo")) {
+    retVal = reportContext.getMessage("transactional_dependency", reportContext.getLocale());
+}
+else if (row["RELATIONSHIP_TYPE"].equals("com.collation.topomgr.jdo.topology.app.dependencies.IpDependencyJdo")) {
+    retVal = reportContext.getMessage("ip_dependency", reportContext.getLocale());
+}
+else if (row["RELATIONSHIP_TYPE"].equals("com.collation.topomgr.jdo.topology.app.dependencies.ServiceDependencyJdo")) {
+    retVal = reportContext.getMessage("service_dependency", reportContext.getLocale());
+}
+else if (row["RELATIONSHIP_TYPE"].equals("com.collation.topomgr.jdo.topology.net.LogicalConnectionJdo")) {
+    retVal = "Logical Connection";
+}</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">RELATIONSHIP_TYPE</property>
+                                <expression name="expression">dataSetRow["RELATIONSHIP_TYPE"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                        </list-property>
+                        <list-property name="sort">
+                            <structure>
+                                <expression name="key">row["SOURCE_HOSTNAME"]</expression>
+                                <property name="direction">asc</property>
+                            </structure>
+                        </list-property>
+                        <column id="204"/>
+                        <column id="3368">
+                            <property name="textAlign">center</property>
+                        </column>
+                        <column id="3380"/>
+                        <column id="2578"/>
+                        <column id="2573"/>
+                        <column id="2568"/>
+                        <column id="3387"/>
+                        <column id="2563"/>
+                        <column id="2553"/>
+                        <column id="2548"/>
+                        <column id="3408"/>
+                        <header>
+                            <row id="2258">
+                                <cell id="2259">
+                                    <property name="colSpan">11</property>
+                                    <property name="rowSpan">1</property>
+                                    <property name="style">table-header-cell</property>
+                                    <text name="Section 1 Heading_Sub-title 1" id="2262">
+                                        <property name="fontSize">125%</property>
+                                        <property name="fontWeight">normal</property>
+                                        <property name="contentType">auto</property>
+                                        <text-property name="content" key="affinity_by_source"><![CDATA[Section 1 App Server Dependency Report]]></text-property>
+                                    </text>
+                                </cell>
+                            </row>
+                            <row id="174">
+                                <cell id="175">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="522">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="source_host"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3363">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3369">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="total_connections"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3375">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="2874">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="source_app"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="2575">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="2579">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="source_app_server"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="2570">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="2580">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="source_ip"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="2565">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="2581">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="source_port"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3382">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="2583">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="destination_app"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="2560">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="2582">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="taddm_relationships_target"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="2550">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="2584">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="destination_ip"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="2545">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="2585">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="destination_port"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3403">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3416">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="taddm_relationships_type"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                            </row>
+                        </header>
+                        <group id="3158">
+                            <property name="groupName">sourceHostId</property>
+                            <property name="interval">none</property>
+                            <property name="sortDirection">asc</property>
+                            <expression name="keyExpr">row["SOURCE_HOST__PK_C"]</expression>
+                            <structure name="toc">
+                                <expression name="expressionValue">row["SOURCE_HOST__PK_C"]</expression>
+                            </structure>
+                            <property name="repeatHeader">true</property>
+                            <property name="hideDetail">false</property>
+                            <property name="pageBreakAfter">auto</property>
+                            <property name="pageBreakBefore">auto</property>
+                            <property name="pageBreakInside">auto</property>
+                            <list-property name="sort">
+                                <structure>
+                                    <expression name="key">row["SOURCE_HOSTNAME"]</expression>
+                                    <property name="direction">asc</property>
+                                </structure>
+                            </list-property>
+                            <header>
+                                <row id="3159">
+                                    <cell id="3160">
+                                        <data id="3180">
+                                            <property name="resultSetColumn">SOURCE_HOSTNAME</property>
+                                        </data>
+                                    </cell>
+                                    <cell id="3364">
+                                        <data id="3372">
+                                            <property name="resultSetColumn">sourcesPerHostId</property>
+                                        </data>
+                                    </cell>
+                                    <cell id="3376"/>
+                                    <cell id="3161"/>
+                                    <cell id="3163"/>
+                                    <cell id="3164"/>
+                                    <cell id="3383"/>
+                                    <cell id="3165"/>
+                                    <cell id="3167"/>
+                                    <cell id="3168"/>
+                                    <cell id="3404"/>
+                                </row>
+                            </header>
+                            <footer>
+                                <row id="3169">
+                                    <cell id="3170"/>
+                                    <cell id="3366"/>
+                                    <cell id="3378"/>
+                                    <cell id="3171"/>
+                                    <cell id="3173"/>
+                                    <cell id="3174"/>
+                                    <cell id="3385"/>
+                                    <cell id="3175"/>
+                                    <cell id="3177"/>
+                                    <cell id="3178"/>
+                                    <cell id="3406"/>
+                                </row>
+                            </footer>
+                        </group>
+                        <detail>
+                            <row id="179">
+                                <property name="height">15px</property>
+                                <property name="style">table-details</property>
+                                <cell id="180">
+                                    <property name="style">table-details</property>
+                                </cell>
+                                <cell id="3365">
+                                    <property name="style">table-details</property>
+                                </cell>
+                                <cell id="3377">
+                                    <property name="style">table-details</property>
+                                    <data id="3204">
+                                        <property name="resultSetColumn">SOURCE_PRIMARY_TYPE</property>
+                                    </data>
+                                </cell>
+                                <cell id="2576">
+                                    <property name="style">table-details</property>
+                                    <data id="3203">
+                                        <property name="resultSetColumn">SOURCE_PRIMARY_NAME</property>
+                                        <structure name="action">
+                                            <property name="linkType">hyperlink</property>
+                                            <expression name="uri">licUrl + "guid=" + row["SOURCE_PRIMARY_GUID"]</expression>
+                                            <property name="targetWindow">_blank</property>
+                                        </structure>
+                                    </data>
+                                </cell>
+                                <cell id="2571">
+                                    <property name="style">table-details</property>
+                                    <data id="3205">
+                                        <property name="resultSetColumn">SOURCE_IP_ADDRESS</property>
+                                    </data>
+                                </cell>
+                                <cell id="2566">
+                                    <property name="style">table-details</property>
+                                    <data id="3206">
+                                        <property name="resultSetColumn">SOURCE_PORT</property>
+                                    </data>
+                                </cell>
+                                <cell id="3384">
+                                    <property name="style">table-details</property>
+                                    <data id="3230">
+                                        <property name="resultSetColumn">TARGET_PRIMARY_TYPE</property>
+                                    </data>
+                                </cell>
+                                <cell id="2561">
+                                    <property name="style">table-details</property>
+                                    <data id="3229">
+                                        <property name="marginTop">0pt</property>
+                                        <property name="paddingTop">1pt</property>
+                                        <property name="resultSetColumn">TARGET_PRIMARY_NAME</property>
+                                        <structure name="action">
+                                            <property name="linkType">hyperlink</property>
+                                            <expression name="uri">if (row["TARGET_PRIMARY_GUID"] != null)
+	retVal = licUrl + "guid=" + row["TARGET_PRIMARY_GUID"]</expression>
+                                            <property name="targetWindow">_blank</property>
+                                        </structure>
+                                    </data>
+                                </cell>
+                                <cell id="2551">
+                                    <property name="style">table-details</property>
+                                    <data id="3231">
+                                        <property name="resultSetColumn">TARGET_IP_ADDRESS</property>
+                                    </data>
+                                </cell>
+                                <cell id="2546">
+                                    <property name="style">table-details</property>
+                                    <data id="3232">
+                                        <property name="resultSetColumn">TARGET_PORT</property>
+                                    </data>
+                                </cell>
+                                <cell id="3405">
+                                    <property name="style">table-details</property>
+                                    <data id="3418">
+                                        <property name="resultSetColumn">relationshipType</property>
+                                    </data>
+                                </cell>
+                            </row>
+                        </detail>
+                        <footer>
+                            <row id="199">
+                                <cell id="200"/>
+                                <cell id="3367"/>
+                                <cell id="3379"/>
+                                <cell id="2577"/>
+                                <cell id="2572"/>
+                                <cell id="2567"/>
+                                <cell id="3386"/>
+                                <cell id="2562"/>
+                                <cell id="2552"/>
+                                <cell id="2547"/>
+                                <cell id="3407"/>
+                            </row>
+                        </footer>
+                    </table>
+                </cell>
+            </row>
+            <row id="3430">
+                <list-property name="visibility">
+                    <structure>
+                        <property name="format">all</property>
+                        <expression name="valueExpr">!isRowCountZero()</expression>
+                    </structure>
+                </list-property>
+                <cell id="3431">
+                    <property name="paddingTop">10pt</property>
+                    <text name="Section 1 Heading_Sub-title 11" id="3435">
+                        <property name="style">sub-title</property>
+                        <property name="fontSize">125%</property>
+                        <property name="fontWeight">normal</property>
+                        <property name="borderTopColor">#000000</property>
+                        <property name="borderTopStyle">solid</property>
+                        <property name="borderTopWidth">medium</property>
+                        <property name="marginTop">0pt</property>
+                        <property name="marginLeft">15pt</property>
+                        <property name="contentType">auto</property>
+                        <text-property name="content" key="affinity_by_source"><![CDATA[Section 1 App Server Dependency Report]]></text-property>
+                    </text>
+                    <grid name="Information Message Dialog" id="1630">
+                        <property name="style">message-box-style</property>
+                        <property name="marginTop">0px</property>
+                        <property name="width">90%</property>
+                        <expression name="bookmark">"Info Message"</expression>
+                        <column id="42">
+                            <property name="width">0.583in</property>
+                        </column>
+                        <column id="43">
+                            <property name="width">4.6770833333in</property>
+                        </column>
+                        <row id="1631">
+                            <cell id="45">
+                                <property name="paddingTop">3px</property>
+                                <property name="paddingLeft">10px</property>
+                                <property name="paddingBottom">0pt</property>
+                                <property name="paddingRight">10px</property>
+                                <property name="textAlign">center</property>
+                                <image name="NewImage2" id="46">
+                                    <property name="source">file</property>
+                                    <expression name="uri">"tcr_common/images/information-2.gif"</expression>
+                                </image>
+                            </cell>
+                            <cell id="47">
+                                <property name="paddingTop">0px</property>
+                                <property name="paddingLeft">0px</property>
+                                <property name="paddingBottom">0px</property>
+                                <property name="paddingRight">0pt</property>
+                                <text name="NewText2" id="52">
+                                    <property name="paddingTop">3px</property>
+                                    <property name="contentType">html</property>
+                                    <text-property name="content"><![CDATA[<b><font color="#444E68" style="bold"><VALUE-OF>getNLS("msg_hdr_dataset_empty");</VALUE-OF>  </font></b> <br> <VALUE-OF>getNLS("msg_dataset_empty");</VALUE-OF>  </br>]]></text-property>
+                                </text>
+                            </cell>
+                        </row>
+                    </grid>
+                </cell>
+            </row>
+            <row id="2256">
+                <cell id="2257">
+                    <property name="paddingTop">10pt</property>
+                    <table name="Table without group 11" id="2263">
+                        <property name="style">table-without-group</property>
+                        <property name="marginTop">15px</property>
+                        <property name="marginBottom">15pt</property>
+                        <property name="marginRight">15pt</property>
+                        <property name="width">100%</property>
+                        <property name="dataSet">target systems</property>
+                        <list-property name="visibility">
+                            <structure>
+                                <property name="format">all</property>
+                                <expression name="valueExpr">setRowCount(Total.count());
+isRowCountZero()</expression>
+                            </structure>
+                        </list-property>
+                        <list-property name="boundDataColumns">
+                            <structure>
+                                <property name="name">SOURCE_PRIMARY_GUID</property>
+                                <expression name="expression">dataSetRow["SOURCE_PRIMARY_GUID"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_PRIMARY_NAME</property>
+                                <expression name="expression">dataSetRow["SOURCE_PRIMARY_NAME"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_PRIMARY_TYPE</property>
+                                <expression name="expression">dataSetRow["SOURCE_PRIMARY_TYPE"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_PK_C</property>
+                                <expression name="expression">dataSetRow["SOURCE_PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_HOST__PK_C</property>
+                                <expression name="expression">dataSetRow["SOURCE_HOST__PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_HOSTNAME</property>
+                                <expression name="expression">dataSetRow["SOURCE_HOSTNAME"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_SERV__PK_C</property>
+                                <expression name="expression">dataSetRow["SOURCE_SERV__PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_IP_ADDRESS</property>
+                                <expression name="expression">dataSetRow["SOURCE_IP_ADDRESS"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">SOURCE_PORT</property>
+                                <expression name="expression">dataSetRow["SOURCE_PORT"]</expression>
+                                <property name="dataType">integer</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_PRIMARY_GUID</property>
+                                <expression name="expression">dataSetRow["TARGET_PRIMARY_GUID"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_PRIMARY_NAME</property>
+                                <expression name="expression">dataSetRow["TARGET_PRIMARY_NAME"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_PRIMARY_TYPE</property>
+                                <expression name="expression">dataSetRow["TARGET_PRIMARY_TYPE"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_PK_C</property>
+                                <expression name="expression">dataSetRow["TARGET_PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_HOST__PK_C</property>
+                                <expression name="expression">dataSetRow["TARGET_HOST__PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_HOSTNAME</property>
+                                <expression name="expression">dataSetRow["TARGET_HOSTNAME"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_SERV__PK_C</property>
+                                <expression name="expression">dataSetRow["TARGET_SERV__PK_C"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_IP_ADDRESS</property>
+                                <expression name="expression">dataSetRow["TARGET_IP_ADDRESS"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">TARGET_PORT</property>
+                                <expression name="expression">dataSetRow["TARGET_PORT"]</expression>
+                                <property name="dataType">integer</property>
+                            </structure>
+                            <structure>
+                                <property name="name">targetsPerHostId</property>
+                                <property name="dataType">any</property>
+                                <simple-property-list name="aggregateOn">
+                                    <value>targetHostId</value>
+                                </simple-property-list>
+                                <property name="aggregateFunction">COUNT</property>
+                            </structure>
+                            <structure>
+                                <property name="name">relationshipType</property>
+                                <expression name="expression">retVal = "";
+
+if (row["RELATIONSHIP_TYPE"].equals("com.collation.topomgr.jdo.topology.net.NetworkConnectionJdo")) {
+    retVal = reportContext.getMessage("network_connection", reportContext.getLocale());
+}
+else if (row["RELATIONSHIP_TYPE"].equals("com.collation.topomgr.jdo.topology.app.dependencies.TransactionalDependencyJdo")) {
+    retVal = reportContext.getMessage("transactional_dependency", reportContext.getLocale());
+}
+else if (row["RELATIONSHIP_TYPE"].equals("com.collation.topomgr.jdo.topology.app.dependencies.IpDependencyJdo")) {
+    retVal = reportContext.getMessage("ip_dependency", reportContext.getLocale());
+}
+else if (row["RELATIONSHIP_TYPE"].equals("com.collation.topomgr.jdo.topology.app.dependencies.ServiceDependencyJdo")) {
+    retVal = reportContext.getMessage("service_dependency", reportContext.getLocale());
+}
+else if (row["RELATIONSHIP_TYPE"].equals("com.collation.topomgr.jdo.topology.net.LogicalConnectionJdo")) {
+    retVal = "Logical Connection";
+}</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                            <structure>
+                                <property name="name">RELATIONSHIP_TYPE</property>
+                                <expression name="expression">dataSetRow["RELATIONSHIP_TYPE"]</expression>
+                                <property name="dataType">string</property>
+                            </structure>
+                        </list-property>
+                        <column id="2285"/>
+                        <column id="3361">
+                            <property name="textAlign">center</property>
+                        </column>
+                        <column id="3394"/>
+                        <column id="3272"/>
+                        <column id="3262"/>
+                        <column id="3257"/>
+                        <column id="3401"/>
+                        <column id="3252"/>
+                        <column id="2286"/>
+                        <column id="2287"/>
+                        <column id="3415"/>
+                        <header>
+                            <row id="2264">
+                                <cell id="2265">
+                                    <property name="colSpan">11</property>
+                                    <property name="rowSpan">1</property>
+                                    <property name="style">table-header-cell</property>
+                                    <text name="Section 1 Heading_Sub-title 111" id="2409">
+                                        <property name="fontSize">125%</property>
+                                        <property name="fontWeight">normal</property>
+                                        <property name="contentType">auto</property>
+                                        <text-property name="content" key="affinity_by_target"><![CDATA[Section 2 App Server Target Dependency Report]]></text-property>
+                                    </text>
+                                </cell>
+                            </row>
+                            <row id="2267">
+                                <cell id="2268">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="2269">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="destination_host"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3356">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3370">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="total_connections"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3389">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3274">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="destination_app"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3269">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3273">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="taddm_relationships_target"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3259">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3275">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="destination_ip"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3254">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3276">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="destination_port"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3396">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3279">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="source_app"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3249">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3280">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="source_app_server"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="2270">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3278">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="source_ip"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="2272">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3277">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="source_port"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                                <cell id="3410">
+                                    <property name="style">table-header-cell</property>
+                                    <text id="3417">
+                                        <property name="contentType">html</property>
+                                        <text-property name="content" key="taddm_relationships_type"><![CDATA[]]></text-property>
+                                    </text>
+                                </cell>
+                            </row>
+                        </header>
+                        <group id="3281">
+                            <property name="groupName">targetHostId</property>
+                            <property name="interval">none</property>
+                            <property name="sortDirection">asc</property>
+                            <expression name="keyExpr">row["TARGET_HOST__PK_C"]</expression>
+                            <structure name="toc">
+                                <expression name="expressionValue">row["TARGET_HOST__PK_C"]</expression>
+                            </structure>
+                            <property name="repeatHeader">true</property>
+                            <property name="hideDetail">false</property>
+                            <property name="pageBreakAfter">auto</property>
+                            <property name="pageBreakBefore">auto</property>
+                            <property name="pageBreakInside">auto</property>
+                            <header>
+                                <row id="3282">
+                                    <cell id="3283">
+                                        <data id="3346">
+                                            <property name="resultSetColumn">TARGET_HOSTNAME</property>
+                                        </data>
+                                    </cell>
+                                    <cell id="3357">
+                                        <data id="3373">
+                                            <property name="resultSetColumn">targetsPerHostId</property>
+                                        </data>
+                                    </cell>
+                                    <cell id="3390"/>
+                                    <cell id="3284"/>
+                                    <cell id="3286"/>
+                                    <cell id="3287"/>
+                                    <cell id="3397"/>
+                                    <cell id="3288"/>
+                                    <cell id="3290"/>
+                                    <cell id="3291"/>
+                                    <cell id="3411"/>
+                                </row>
+                            </header>
+                            <footer>
+                                <row id="3292">
+                                    <cell id="3293"/>
+                                    <cell id="3359"/>
+                                    <cell id="3392"/>
+                                    <cell id="3294"/>
+                                    <cell id="3296"/>
+                                    <cell id="3297"/>
+                                    <cell id="3399"/>
+                                    <cell id="3298"/>
+                                    <cell id="3300"/>
+                                    <cell id="3301"/>
+                                    <cell id="3413"/>
+                                </row>
+                            </footer>
+                        </group>
+                        <detail>
+                            <row id="2274">
+                                <property name="height">15px</property>
+                                <property name="style">table-details</property>
+                                <cell id="2275">
+                                    <property name="style">table-details</property>
+                                </cell>
+                                <cell id="3358">
+                                    <property name="style">table-details</property>
+                                </cell>
+                                <cell id="3391">
+                                    <property name="style">table-details</property>
+                                    <data id="3348">
+                                        <property name="resultSetColumn">TARGET_PRIMARY_TYPE</property>
+                                    </data>
+                                </cell>
+                                <cell id="3270">
+                                    <property name="style">table-details</property>
+                                    <data id="3347">
+                                        <property name="resultSetColumn">TARGET_PRIMARY_NAME</property>
+                                        <structure name="action">
+                                            <property name="linkType">hyperlink</property>
+                                            <expression name="uri">licUrl + "guid=" + row["TARGET_PRIMARY_GUID"]</expression>
+                                            <property name="targetWindow">_blank</property>
+                                        </structure>
+                                    </data>
+                                </cell>
+                                <cell id="3260">
+                                    <property name="style">table-details</property>
+                                    <data id="3349">
+                                        <property name="resultSetColumn">TARGET_IP_ADDRESS</property>
+                                    </data>
+                                </cell>
+                                <cell id="3255">
+                                    <property name="style">table-details</property>
+                                    <data id="3350">
+                                        <property name="resultSetColumn">TARGET_PORT</property>
+                                    </data>
+                                </cell>
+                                <cell id="3398">
+                                    <property name="style">table-details</property>
+                                    <data id="3352">
+                                        <property name="resultSetColumn">SOURCE_PRIMARY_TYPE</property>
+                                    </data>
+                                </cell>
+                                <cell id="3250">
+                                    <property name="style">table-details</property>
+                                    <data id="3351">
+                                        <property name="resultSetColumn">SOURCE_PRIMARY_NAME</property>
+                                        <structure name="action">
+                                            <property name="linkType">hyperlink</property>
+                                            <expression name="uri">licUrl + "guid=" + row["SOURCE_PRIMARY_GUID"]</expression>
+                                            <property name="targetWindow">_blank</property>
+                                        </structure>
+                                    </data>
+                                </cell>
+                                <cell id="2277">
+                                    <property name="style">table-details</property>
+                                    <data id="3353">
+                                        <property name="resultSetColumn">SOURCE_IP_ADDRESS</property>
+                                    </data>
+                                </cell>
+                                <cell id="2279">
+                                    <property name="style">table-details</property>
+                                    <data id="3354">
+                                        <property name="resultSetColumn">SOURCE_PORT</property>
+                                    </data>
+                                </cell>
+                                <cell id="3412">
+                                    <property name="style">table-details</property>
+                                    <data id="3419">
+                                        <property name="resultSetColumn">relationshipType</property>
+                                    </data>
+                                </cell>
+                            </row>
+                        </detail>
+                        <footer>
+                            <row id="2281">
+                                <cell id="2282"/>
+                                <cell id="3360"/>
+                                <cell id="3393"/>
+                                <cell id="3271"/>
+                                <cell id="3261"/>
+                                <cell id="3256"/>
+                                <cell id="3400"/>
+                                <cell id="3251"/>
+                                <cell id="2283"/>
+                                <cell id="2284"/>
+                                <cell id="3414"/>
+                            </row>
+                        </footer>
+                    </table>
+                </cell>
+            </row>
+            <row id="3428">
+                <list-property name="visibility">
+                    <structure>
+                        <property name="format">all</property>
+                        <expression name="valueExpr">!isRowCountZero()</expression>
+                    </structure>
+                </list-property>
+                <cell id="3429">
+                    <property name="paddingTop">10pt</property>
+                    <text name="Section 1 Heading_Sub-title 1111" id="3434">
+                        <property name="style">sub-title</property>
+                        <property name="fontSize">125%</property>
+                        <property name="fontWeight">normal</property>
+                        <property name="borderTopColor">#000000</property>
+                        <property name="borderTopStyle">solid</property>
+                        <property name="borderTopWidth">2px</property>
+                        <property name="marginTop">0pt</property>
+                        <property name="marginLeft">15pt</property>
+                        <property name="paddingTop">1pt</property>
+                        <property name="contentType">auto</property>
+                        <text-property name="content" key="affinity_by_target"><![CDATA[Section 2 App Server Target Dependency Report]]></text-property>
+                    </text>
+                    <grid name="Information Message Dialog1" id="2430">
+                        <property name="style">message-box-style</property>
+                        <property name="borderBottomWidth">1px</property>
+                        <property name="marginTop">0px</property>
+                        <property name="width">90%</property>
+                        <expression name="bookmark">"Info Message"</expression>
+                        <column id="2431">
+                            <property name="width">0.583in</property>
+                        </column>
+                        <column id="2432">
+                            <property name="width">4.6770833333in</property>
+                        </column>
+                        <row id="2433">
+                            <cell id="2434">
+                                <property name="paddingTop">3px</property>
+                                <property name="paddingLeft">10px</property>
+                                <property name="paddingBottom">0pt</property>
+                                <property name="paddingRight">10px</property>
+                                <property name="textAlign">center</property>
+                                <image name="NewImage21" id="2435">
+                                    <property name="source">file</property>
+                                    <expression name="uri">"tcr_common/images/information-2.gif"</expression>
+                                </image>
+                            </cell>
+                            <cell id="2436">
+                                <property name="paddingTop">0px</property>
+                                <property name="paddingLeft">0px</property>
+                                <property name="paddingBottom">0px</property>
+                                <property name="paddingRight">0pt</property>
+                                <text name="NewText21" id="2437">
+                                    <property name="paddingTop">3px</property>
+                                    <property name="contentType">html</property>
+                                    <text-property name="content"><![CDATA[<b><font color="#444E68" style="bold"><VALUE-OF>getNLS("msg_hdr_dataset_empty");</VALUE-OF>  </font></b> <br> <VALUE-OF>getNLS("msg_dataset_empty");</VALUE-OF>  </br>]]></text-property>
+                                </text>
+                            </cell>
+                        </row>
+                    </grid>
+                </cell>
+            </row>
+        </grid>
+        <grid name="Description" id="322">
+            <property name="width">100%</property>
+            <column id="323"/>
+            <row id="326">
+                <cell id="327">
+                    <grid name="Description111" id="2186">
+                        <property name="width">100%</property>
+                        <column id="2187"/>
+                        <row id="2252">
+                            <cell id="2253">
+                                <label id="2255">
+                                    <property name="fontWeight">bold</property>
+                                    <property name="marginTop">15pt</property>
+                                    <property name="marginBottom">0pt</property>
+                                    <text-property name="text">Server Affinity by Host</text-property>
+                                </label>
+                                <data name="Footer" id="2254">
+                                    <property name="marginTop">0pt</property>
+                                    <property name="marginLeft">0pt</property>
+                                    <property name="marginBottom">15pt</property>
+                                    <property name="paddingTop">1pt</property>
+                                    <list-property name="boundDataColumns">
+                                        <structure>
+                                            <property name="name">dynamic_footer</property>
+                                            <property name="displayName">dynamic_footer</property>
+                                            <expression name="expression">messageParams = new Array(1); messageParams[0] = params["host"]; reportContext.getMessage("affinity_report_formatted_desc", reportContext.getLocale(), messageParams);</expression>
+                                            <property name="dataType">any</property>
+                                        </structure>
+                                    </list-property>
+                                    <property name="resultSetColumn">dynamic_footer</property>
+                                </data>
+                            </cell>
+                        </row>
+                    </grid>
+                </cell>
+            </row>
+        </grid>
+    </body>
+</report>
